@@ -503,28 +503,56 @@ class Game {
     }
     const card = createCardInstance(cardId, who);
     if (!card) return false;
-    // キーワード：速攻・突撃
+    this._placeUnitOnField(who, card, null);
+    return true;
+  }
+
+  /** ユニットを場に配置し、キーワードと出た時効果を適用 */
+  _placeUnitOnField(who, card, targetUid) {
+    const p = who === "player" ? this.player : this.enemy;
+    const def = CARD_POOL[card.cardId];
+    // 定義からキーワードを再適用（インスタンス漏れ防止）
+    if (def) {
+      card.rush = !!def.rush;
+      card.charge = !!def.charge;
+      card.guard = !!def.guard;
+      card.onDeath = def.onDeath || null;
+      card.effectText = def.effectText || card.effectText || "";
+    }
     card.exhausted = (card.rush || card.charge) ? false : true;
     if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
+    else card._summonTurnFaceBlock = false;
+
     p.field.push(card);
-    this.log(`${card.name}を場に出した。`);
-    // 場に出た時効果（対象不要のみ自動誘発。対象必要はランダム or スキップ）
-    const def = CARD_POOL[cardId];
+    const kw = [];
+    if (card.guard) kw.push("護衛");
+    if (card.charge) kw.push("突撃");
+    if (card.rush) kw.push("速攻");
+    this.log(`${card.name}を場に出した。` + (kw.length ? `（${kw.join("・")}）` : ""));
+
     if (def && def.onPlay) {
-      if (def.needsTarget) {
-        const enemies = (who === "player" ? this.enemy : this.player).field.filter(c => c.type === "unit");
-        const t = enemies.length ? enemies[Math.floor(Math.random() * enemies.length)] : null;
-        def.onPlay(this, who, t ? t.uid : null);
-      } else if (def.needsTargetAlly) {
-        const allies = p.field.filter(c => c.type === "unit" && c.uid !== card.uid);
-        const t = allies.length ? allies[Math.floor(Math.random() * allies.length)] : null;
-        def.onPlay(this, who, t ? t.uid : null);
-      } else {
-        def.onPlay(this, who);
+      try {
+        if (def.needsTarget) {
+          let uid = targetUid;
+          if (uid == null) {
+            const enemies = (who === "player" ? this.enemy : this.player).field.filter(c => c.type === "unit");
+            uid = enemies.length ? enemies[Math.floor(Math.random() * enemies.length)].uid : null;
+          }
+          def.onPlay(this, who, uid);
+        } else if (def.needsTargetAlly) {
+          let uid = targetUid;
+          if (uid == null) {
+            const allies = p.field.filter(c => c.type === "unit" && c.uid !== card.uid);
+            uid = allies.length ? allies[Math.floor(Math.random() * allies.length)].uid : null;
+          }
+          def.onPlay(this, who, uid);
+        } else {
+          def.onPlay(this, who);
+        }
+      } catch (err) {
+        console.error("onPlay error", card.cardId, err);
       }
     }
-    this.checkDeaths();
-    return true;
   }
 
   // ========== 効果ヘルパー ==========
@@ -750,16 +778,15 @@ class Game {
       const def = CARD_POOL[card.cardId];
       if (def && def.effect) def.effect(this, "player");
       p.grave.push(card);
+    } else if (card.type === "unit") {
+      this._placeUnitOnField("player", card, null);
     } else {
-      // 速攻・突撃なら出したターンでも攻撃可
-      card.exhausted = (card.rush || card.charge) ? false : true;
-      if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
+      // フィールドカード
+      card.exhausted = false;
       p.field.push(card);
       this.log(`${card.name}を場に出した。`);
       const def = CARD_POOL[card.cardId];
-      if (def && def.onPlay && !card.needsTarget && !card.needsTargetAlly) {
-        def.onPlay(this, "player");
-      }
+      if (def && def.onPlay) def.onPlay(this, "player");
     }
     this.pendingTarget = null;
     this.updateCancelButton();
@@ -787,12 +814,7 @@ class Game {
       if (def && def.effect) def.effect(this, "player", targetUid);
       this.player.grave.push(card);
     } else {
-      // unit onPlay with target (enemy or ally)
-      card.exhausted = (card.rush || card.charge) ? false : true;
-      this.player.field.push(card);
-      this.log(`${card.name}を場に出した。`);
-      const def = CARD_POOL[card.cardId];
-      if (def && def.onPlay) def.onPlay(this, "player", targetUid);
+      this._placeUnitOnField("player", card, targetUid);
     }
 
     this.pendingTarget = null;
@@ -1102,24 +1124,12 @@ class Game {
           }
         }
         e.grave.push(card);
+      } else if (card.type === "unit") {
+        this._placeUnitOnField("enemy", card, null);
       } else {
-        card.exhausted = (card.rush || card.charge) ? false : true;
-        if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
+        // field
         e.field.push(card);
         this.log(`敵は${card.name}を場に出した。`);
-        if (def && def.onPlay) {
-          if (card.needsTarget) {
-            const targets = this.player.field.filter(c => c.type === "unit");
-            const t = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
-            def.onPlay(this, "enemy", t ? t.uid : null);
-          } else if (card.needsTargetAlly) {
-            const allies = e.field.filter(c => c.type === "unit" && c.uid !== card.uid);
-            const t = allies.length ? allies[Math.floor(Math.random() * allies.length)] : null;
-            def.onPlay(this, "enemy", t ? t.uid : null);
-          } else {
-            def.onPlay(this, "enemy");
-          }
-        }
       }
       this.checkDeaths();
       if (this.checkWinLose()) return;
@@ -1229,7 +1239,7 @@ class Game {
       }
     }
 
-    // 手札：クリックで選択（詳細表示）→「出す」または場クリックでプレイ
+    // 手札：クリックで詳細 / ダブルクリック(スマホは2回タップ)でプレイ
     const handEl = document.getElementById("player-hand");
     handEl.innerHTML = "";
     this.player.hand.forEach(c => {
@@ -1237,82 +1247,87 @@ class Game {
       const canPlay = c.cost <= this.player.mana && this.currentPlayer === "player" && !this.pendingTarget &&
         !((c.type === "unit" || c.type === "field") && this.player.field.length >= 5);
       if (canPlay) el.classList.add("can-play");
-      if (this._selectedHandUid === c.uid) el.classList.add("tap-armed");
 
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      // 詳細表示
+      const showDetail = () => {
+        document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+        el.classList.add("show-tooltip");
+      };
+
+      const play = () => {
         if (this.pendingTarget) return;
         if (this.currentPlayer !== "player") return;
-
-        // 同じカードを再タップ → 詳細トグルのみ
-        if (this._selectedHandUid === c.uid) {
-          el.classList.toggle("show-tooltip");
-          return;
-        }
-
         document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
         document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
-        this._selectedHandUid = c.uid;
-        el.classList.add("tap-armed");
-        el.classList.add("show-tooltip");
-        this.log(`${c.name}を選択 → 「出す」ボタンか場をタップ`);
-        this.updatePlayBar();
-        this.updateUIBoardHighlight();
-      });
+        this._selectedHandUid = null;
+        this._handTapUid = null;
+        this.tryPlayCard(c.uid);
+      };
+
+      if (this.isTouchDevice()) {
+        let lastTap = 0;
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (this.pendingTarget) return;
+          const now = Date.now();
+          if (this._handTapUid === c.uid && now - lastTap < 700) {
+            this._handTapUid = null;
+            el.classList.remove("tap-armed");
+            play();
+          } else {
+            document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
+            this._handTapUid = c.uid;
+            lastTap = now;
+            el.classList.add("tap-armed");
+            showDetail();
+            this.log(`${c.name}を選択（もう一度タップでプレイ）`);
+          }
+        });
+      } else {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          showDetail();
+        });
+        el.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          play();
+        });
+      }
       handEl.appendChild(el);
     });
 
     // 自分の場
     const pf = document.getElementById("player-field");
     pf.innerHTML = "";
-    pf.classList.toggle("play-target", !!(this._selectedHandUid && this.currentPlayer === "player" && !this.pendingTarget));
+    pf.classList.remove("play-target");
 
     this.player.field.forEach(c => {
       const el = this.createCardElement(c, true);
       if (c.exhausted) el.classList.add("exhausted");
       if (this.selectedUnitUid === c.uid) el.classList.add("selected");
 
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // 手札選択中 → 場へのプレイ確定
-        if (this._selectedHandUid && !this.pendingTarget && this.currentPlayer === "player") {
-          this.confirmPlaySelected();
-          return;
-        }
-        // 味方対象選択
-        if (this.pendingTarget && (this.pendingTarget.type === "playOnPlayAlly" || this.pendingTarget.type === "fieldTargetAlly") && c.type === "unit") {
-          if (this.pendingTarget.type === "fieldTargetAlly") this.resolveFieldTarget(c.uid);
-          else this.resolvePlayWithTarget(c.uid);
-          return;
-        }
-        if (this.pendingTarget) return;
-        // 詳細表示
-        if (e.detail === 1) {
-          const showing = el.classList.contains("show-tooltip");
-          document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
-          if (!showing) el.classList.add("show-tooltip");
-        }
-        // 攻撃選択 / フィールド起動
-        if (c.type === "unit" && !c.exhausted && this.currentPlayer === "player") {
-          this.selectUnitForAttack(c.uid);
-        } else if (c.type === "field" && this.currentPlayer === "player") {
-          this.tryActivateField(c.uid);
-        }
-      });
       if (this.pendingTarget && (this.pendingTarget.type === "playOnPlayAlly" || this.pendingTarget.type === "fieldTargetAlly") && c.type === "unit") {
         el.classList.add("targetable");
+        el.onclick = () => {
+          if (this.pendingTarget.type === "fieldTargetAlly") this.resolveFieldTarget(c.uid);
+          else this.resolvePlayWithTarget(c.uid);
+        };
+      } else {
+        el.onclick = () => {
+          if (this.pendingTarget) return;
+          document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+          el.classList.add("show-tooltip");
+          if (c.type === "unit" && !c.exhausted && this.currentPlayer === "player") {
+            this.selectUnitForAttack(c.uid);
+          } else if (c.type === "field" && this.currentPlayer === "player") {
+            this.tryActivateField(c.uid);
+          }
+        };
       }
       pf.appendChild(el);
     });
-
-    // 場の空き領域クリックでプレイ
-    pf.onclick = (e) => {
-      if (e.target !== pf) return;
-      if (this._selectedHandUid && !this.pendingTarget && this.currentPlayer === "player") {
-        this.confirmPlaySelected();
-      }
-    };
 
     // 敵の場
     const ef = document.getElementById("enemy-field");
