@@ -43,6 +43,12 @@ class Game {
     };
   }
 
+  isTouchDevice() {
+    return window.matchMedia("(pointer: coarse)").matches ||
+           ("ontouchstart" in window) ||
+           navigator.maxTouchPoints > 0;
+  }
+
   log(msg) {
     const el = document.getElementById("log");
     if (!el) return;
@@ -1046,11 +1052,37 @@ class Game {
           el.classList.add("can-play");
         }
       }
-      el.ondblclick = () => {
+      const play = () => {
         if (this.pendingTarget) return;
         this.tryPlayCard(c.uid);
       };
-      // シングルクリックでは詳細確認のみ（ツールチップはhover）
+      if (this.isTouchDevice()) {
+        // スマホ: タップでプレイ / 長押しで詳細
+        let pressTimer = null;
+        let longPressed = false;
+        el.addEventListener("touchstart", (e) => {
+          longPressed = false;
+          pressTimer = setTimeout(() => {
+            longPressed = true;
+            document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+            el.classList.add("show-tooltip");
+          }, 450);
+        }, { passive: true });
+        el.addEventListener("touchend", (e) => {
+          clearTimeout(pressTimer);
+          if (longPressed) {
+            e.preventDefault();
+            return;
+          }
+          play();
+        });
+        el.addEventListener("touchmove", () => clearTimeout(pressTimer), { passive: true });
+        el.onclick = (e) => {
+          // ツールチップ外タップで閉じる用
+        };
+      } else {
+        el.ondblclick = play;
+      }
       handEl.appendChild(el);
     });
 
@@ -1176,4 +1208,9 @@ class Game {
 
 window.addEventListener("DOMContentLoaded", () => {
   window.game = new Game();
+  document.addEventListener("touchstart", (e) => {
+    if (!e.target.closest(".card.show-tooltip") && !e.target.closest(".card-tooltip")) {
+      document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+    }
+  }, { passive: true });
 });

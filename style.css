@@ -9,7 +9,11 @@ body {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: #e8e8e8;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 12px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 #app {
@@ -824,4 +828,283 @@ h3 {
   margin: 8px 0 12px;
   font-size: 1.1rem;
   color: #ffd700;
+}
+
+
+/* ========== スマホ対応 ========== */
+@media (max-width: 800px) {
+  body {
+    padding: 6px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    font-size: 14px;
+  }
+  #app {
+    max-width: 100%;
+  }
+  .screen {
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+  h1 {
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 1.15rem;
+  }
+  h3 {
+    font-size: 0.85rem;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .rules-box {
+    margin-top: 16px;
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+  .btn {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+  .button-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .button-row .btn {
+    width: 100%;
+  }
+
+  /* ステータス */
+  .top-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .status-block {
+    min-width: 0;
+    width: 100%;
+    padding: 10px 12px;
+  }
+  .enemy-status {
+    text-align: left;
+  }
+  .enemy-status .hp-row {
+    flex-direction: row;
+  }
+  .hp-num {
+    font-size: 1rem;
+    min-width: 52px;
+  }
+  .hp-num strong {
+    font-size: 1.15rem;
+  }
+  .mana-pip {
+    width: 14px;
+    height: 14px;
+  }
+  .mana-num {
+    font-size: 0.95rem;
+  }
+
+  /* フィールド */
+  .field {
+    min-height: 100px;
+    gap: 6px;
+    padding: 6px;
+    justify-content: center;
+  }
+  .field-section {
+    margin: 6px 0;
+  }
+
+  /* カード */
+  .card {
+    width: 96px;
+    min-height: 132px;
+    border-width: 2px;
+    padding: 4px;
+  }
+  .card .cost {
+    width: 24px;
+    height: 24px;
+    font-size: 0.85rem;
+  }
+  .card .name {
+    font-size: 0.68rem;
+    margin-top: 22px;
+  }
+  .card .type-label {
+    font-size: 0.55rem;
+  }
+  .card .effect {
+    font-size: 0.55rem;
+    -webkit-line-clamp: 2;
+  }
+  .card .stats .stat-badge {
+    min-width: 38px;
+    padding: 2px 4px;
+    font-size: 0.85rem;
+  }
+  .card .kw-icons {
+    font-size: 0.75rem;
+  }
+  .rarity-dot {
+    width: 10px;
+    height: 10px;
+  }
+  /* スマホではホバーツールチップを無効化し、タップで表示 */
+  .card:hover .card-tooltip {
+    display: none;
+  }
+  .card.show-tooltip .card-tooltip {
+    display: block;
+    position: fixed;
+    left: 50% !important;
+    bottom: auto !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%);
+    width: min(280px, 90vw);
+    z-index: 500;
+    pointer-events: auto;
+  }
+  .card:hover {
+    transform: none;
+  }
+  .card.selected {
+    transform: translateY(-4px);
+  }
+
+  /* 手札：横スクロール */
+  .hand-section h3 .hint {
+    display: block;
+    font-size: 0.7rem;
+  }
+  .hand-area {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    min-height: 145px;
+    padding: 8px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .hand-area .card {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+
+  /* アクションバー固定風 */
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    background: rgba(15, 20, 40, 0.92);
+    backdrop-filter: blur(8px);
+    padding: 10px 6px;
+    margin: 8px -10px -12px;
+    border-radius: 0 0 12px 12px;
+    gap: 8px;
+    z-index: 50;
+  }
+  .action-bar .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* デッキ構築 */
+  .deckbuild-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .pool-panel, .deck-panel {
+    max-height: 40vh;
+  }
+  .pool-item, .deck-item {
+    padding: 8px;
+    gap: 8px;
+  }
+  .pool-item .card-mini, .deck-item .card-mini {
+    width: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+  .pool-item .info .cname {
+    font-size: 0.85rem;
+  }
+  .pool-item .info .cmeta, .pool-item .info .ceffect {
+    font-size: 0.72rem;
+  }
+  .pool-item .count-ctrl button,
+  .deck-item .count-ctrl button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+
+  /* モーダル */
+  .modal {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modal-content {
+    max-height: 75vh;
+    border-radius: 14px 14px 0 0;
+    max-width: 100%;
+  }
+  .log-full {
+    max-height: 55vh;
+  }
+
+  #turn-indicator {
+    font-size: 1rem;
+  }
+  .center-info {
+    margin: 4px 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .card {
+    width: 84px;
+    min-height: 118px;
+  }
+  .card .name {
+    font-size: 0.62rem;
+  }
+  .hand-area {
+    min-height: 130px;
+  }
+  .mana-pip {
+    width: 11px;
+    height: 11px;
+    gap: 2px;
+  }
+  .mana-pips {
+    gap: 3px;
+  }
+}
+
+/* 横向きスマホ */
+@media (max-width: 900px) and (orientation: landscape) {
+  .top-bar {
+    flex-direction: row;
+  }
+  .status-block {
+    width: auto;
+    flex: 1;
+  }
+  .hand-area {
+    min-height: 120px;
+  }
+  .field {
+    min-height: 90px;
+  }
+  .action-bar {
+    position: relative;
+    margin: 8px 0 0;
+  }
 }
