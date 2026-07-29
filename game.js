@@ -1057,16 +1057,19 @@ class Game {
         this.tryPlayCard(c.uid);
       };
       if (this.isTouchDevice()) {
-        // スマホ: タップでプレイ / 長押しで詳細
+        // スマホ: 2回タップでプレイ / 長押しで詳細
         let pressTimer = null;
         let longPressed = false;
+        let lastTap = 0;
         el.addEventListener("touchstart", (e) => {
           longPressed = false;
           pressTimer = setTimeout(() => {
             longPressed = true;
+            this._handTapUid = null;
             document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+            document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
             el.classList.add("show-tooltip");
-          }, 450);
+          }, 500);
         }, { passive: true });
         el.addEventListener("touchend", (e) => {
           clearTimeout(pressTimer);
@@ -1074,12 +1077,23 @@ class Game {
             e.preventDefault();
             return;
           }
-          play();
+          const now = Date.now();
+          if (this._handTapUid === c.uid && now - lastTap < 600) {
+            // 2回目タップ → プレイ
+            this._handTapUid = null;
+            el.classList.remove("tap-armed");
+            play();
+          } else {
+            // 1回目タップ → 選択表示
+            document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
+            document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+            this._handTapUid = c.uid;
+            lastTap = now;
+            el.classList.add("tap-armed");
+            this.log(`${c.name}を選択（もう一度タップでプレイ）`);
+          }
         });
         el.addEventListener("touchmove", () => clearTimeout(pressTimer), { passive: true });
-        el.onclick = (e) => {
-          // ツールチップ外タップで閉じる用
-        };
       } else {
         el.ondblclick = play;
       }

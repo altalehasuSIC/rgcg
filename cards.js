@@ -365,11 +365,9 @@ const CARD_POOL = {
     onPlay: (game, owner) => game.healPlayer(owner, 3)
   },
   "連射弓兵": {
-    id: "連射弓兵", name: "連射弓兵", cost: 4, type: "unit", atk: 2, hp: 3,
-    effectText: "場に出た時：相手のユニット全てに1ダメージ。",
-    onPlay: (game, owner) => {
-      game.damageAllUnits(owner === "player" ? "enemy" : "player", 1);
-    }
+    id: "連射弓兵", name: "連射弓兵", cost: 4, type: "unit", atk: 3, hp: 4,
+    effectText: "場に出た時：矢倉を1枚場に出す。",
+    onPlay: (game, owner) => game.summonToken(owner, "矢倉")
   },
   "決死隊": {
     id: "決死隊", name: "決死隊", cost: 3, type: "spell",
@@ -517,7 +515,45 @@ const CARD_POOL = {
       game.summonToken(owner, "槍兵");
       game.summonToken(owner, "尖兵");
     }
+  },
+  "荒くれものの頭": {
+    id: "荒くれものの頭", name: "荒くれものの頭", cost: 6, type: "unit", atk: 3, hp: 5,
+    effectText: "場に出た時：相手のユニット1体を破壊。相手プレイヤーに2ダメージ。",
+    needsTarget: true,
+    onPlay: (game, owner, targetUid) => {
+      if (targetUid != null) game.destroyUnit(targetUid);
+      game.damagePlayer(owner === "player" ? "enemy" : "player", 2);
+    }
+  },
+  "銀の突撃兵": {
+    id: "銀の突撃兵", name: "銀の突撃兵", cost: 6, type: "unit", atk: 7, hp: 4,
+    effectText: "突撃（出たターンにユニットへ攻撃できる）。",
+    charge: true
+  },
+  "守護兵団": {
+    id: "守護兵団", name: "守護兵団", cost: 3, type: "unit", atk: 1, hp: 4,
+    effectText: "護衛。場に出た時：召集兵を2枚場に出す。",
+    guard: true,
+    onPlay: (game, owner) => {
+      game.summonToken(owner, "召集兵");
+      game.summonToken(owner, "召集兵");
+    }
+  },
+  "英雄級指揮官": {
+    id: "英雄級指揮官", name: "英雄級指揮官", cost: 5, type: "unit", atk: 3, hp: 4,
+    effectText: "場に出た時：味方ユニット全ての攻撃力と体力をそれぞれ+1。",
+    onPlay: (game, owner) => game.buffAllUnits(owner, 1, 1)
+  },
+  "伝説級騎士団長": {
+    id: "伝説級騎士団長", name: "伝説級騎士団長", cost: 7, type: "unit", atk: 3, hp: 7,
+    effectText: "護衛。場に出た時：兵団長と精鋭槍兵を1体ずつ場に出す。",
+    guard: true,
+    onPlay: (game, owner) => {
+      game.summonToken(owner, "兵団長");
+      game.summonToken(owner, "精鋭槍兵");
+    }
   }
+
 };
 
 /** 初期デッキ構成（30枚） */
@@ -555,6 +591,8 @@ const RARITY_MAP = {
   "決死隊": "epic", "毒矢": "epic", "緊急徴兵": "epic", "監視塔": "epic", "兵舎": "epic",
   "王直属近衛": "ultimate", "黒騎兵団": "ultimate", "戦術爆撃": "ultimate",
   "再生の儀式": "ultimate", "魔法砲台": "ultimate",
+    "荒くれものの頭": "epic", "銀の突撃兵": "epic", "守護兵団": "ultimate",
+  "英雄級指揮官": "ultimate", "伝説級騎士団長": "ultimate",
   "名の知れた傭兵": "ultimate", "不屈の護衛官": "ultimate", "無双の将校": "ultimate", "伝説的な指揮官": "epic",
   "伝説の英雄": "legend", "不滅の守護神": "legend", "終末の宣告": "legend",
   "無限の兵站": "legend", "世界樹の砦": "legend"

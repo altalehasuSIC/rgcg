@@ -831,6 +831,65 @@ h3 {
 }
 
 
+
+
+/* ステータスをコンパクトに */
+.status-block {
+  padding: 8px 12px;
+}
+.status-label {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+.hp-row {
+  margin-bottom: 4px;
+  gap: 6px;
+}
+.hp-bar-wrap {
+  height: 12px;
+}
+.hp-icon {
+  font-size: 1rem;
+}
+.hp-num {
+  font-size: 0.95rem;
+  min-width: 48px;
+}
+.hp-num strong {
+  font-size: 1.05rem;
+}
+.mana-row {
+  gap: 6px;
+}
+.mana-label {
+  font-size: 0.75rem;
+}
+.mana-pip {
+  width: 12px;
+  height: 12px;
+}
+.mana-num {
+  font-size: 0.9rem;
+  min-width: 40px;
+}
+.mana-num strong {
+  font-size: 1rem;
+}
+.streak-row {
+  margin-top: 2px;
+  font-size: 0.75rem;
+}
+.streak-row strong {
+  font-size: 0.95rem;
+}
+
+/* スマホ: 1回目タップ選択中 */
+.card.tap-armed {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+  transform: translateY(-4px);
+}
+
 /* ========== スマホ対応 ========== */
 @media (max-width: 800px) {
   body {
@@ -890,6 +949,34 @@ h3 {
   .enemy-status {
     text-align: left;
   }
+
+  .status-block {
+    padding: 6px 10px;
+  }
+  .status-label {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+  .hp-row {
+    margin-bottom: 2px;
+  }
+  .hp-bar-wrap {
+    height: 10px;
+  }
+  .hp-num {
+    font-size: 0.9rem;
+  }
+  .hp-num strong {
+    font-size: 1rem;
+  }
+  .mana-pip {
+    width: 11px;
+    height: 11px;
+  }
+  .streak-row {
+    font-size: 0.7rem;
+  }
+
   .enemy-status .hp-row {
     flex-direction: row;
   }
