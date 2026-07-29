@@ -42,10 +42,10 @@ const CARD_POOL = {
     id: "中級兵士", name: "中級兵士", cost: 3, type: "unit", atk: 3, hp: 3, effectText: ""
   },
   "徴兵施設": {
-    id: "徴兵施設", name: "徴兵施設", cost: 3, type: "field",
-    effectText: "起動：コスト1を支払い召集兵を1枚場に出す。",
+    id: "徴兵施設", name: "徴兵施設", cost: 2, type: "field",
+    effectText: "起動：コスト1を支払い民兵を1枚場に出す。",
     activateCost: 1,
-    effect: (game, owner) => game.summonToken(owner, "召集兵")
+    effect: (game, owner) => game.summonToken(owner, "民兵")
   },
   "リクルート": {
     id: "リクルート", name: "リクルート", cost: 3, type: "spell",
@@ -262,10 +262,10 @@ const CARD_POOL = {
   },
   "戦術指揮": {
     id: "戦術指揮", name: "戦術指揮", cost: 3, type: "spell",
-    effectText: "カードを1枚引き、味方ユニット全ての体力+1。",
+    effectText: "カードを1枚引き、味方ユニット全ての攻撃力+1、体力+1。",
     effect: (game, owner) => {
       game.drawCards(owner, 1);
-      game.buffAllUnits(owner, 0, 1);
+      game.buffAllUnits(owner, 1, 1);
     }
   },
   "落石": {
@@ -294,28 +294,35 @@ const CARD_POOL = {
   },
   "処刑": {
     id: "処刑", name: "処刑", cost: 5, type: "spell",
-    effectText: "相手のユニット1体を破壊する。",
+    effectText: "相手のユニット1体またはフィールド1つを破壊する。",
     needsTarget: true,
+    canTargetField: true,
     effect: (game, owner, targetUid) => {
-      if (targetUid != null) game.destroyUnit(targetUid);
+      if (targetUid != null) game.destroyAny(targetUid);
     }
   },
 
   // ========== 新規フィールド（5種） ==========
   "野戦病院": {
-    id: "野戦病院", name: "野戦病院", cost: 2, type: "field",
+    id: "野戦病院", name: "野戦病院", cost: 1, type: "field",
     effectText: "起動：コスト1を支払い、自分の体力を2回復。",
     activateCost: 1,
     effect: (game, owner) => game.healPlayer(owner, 2)
   },
   "訓練所": {
-    id: "訓練所", name: "訓練所", cost: 3, type: "field",
-    effectText: "起動：コスト2を支払い、味方ユニット全ての攻撃力+1。",
+    id: "訓練所", name: "訓練所", cost: 2, type: "field",
+    effectText: "起動：コスト2を支払い、味方ユニット1体の攻撃力+2し突撃を与える。",
     activateCost: 2,
-    effect: (game, owner) => game.buffAllUnits(owner, 1, 0)
+    needsTargetAlly: true,
+    effect: (game, owner, targetUid) => {
+      if (targetUid != null) {
+        game.buffUnit(targetUid, 2, 0);
+        game.giveCharge(targetUid);
+      }
+    }
   },
   "矢倉": {
-    id: "矢倉", name: "矢倉", cost: 3, type: "field",
+    id: "矢倉", name: "矢倉", cost: 2, type: "field",
     effectText: "起動：コスト1を支払い、相手のユニット全てに1ダメージ。",
     activateCost: 1,
     effect: (game, owner) => {
@@ -325,12 +332,12 @@ const CARD_POOL = {
   },
   "補給基地": {
     id: "補給基地", name: "補給基地", cost: 4, type: "field",
-    effectText: "起動：コスト2を支払い、カードを2枚引く。",
-    activateCost: 2,
+    effectText: "起動：コスト1を支払い、カードを2枚引く。",
+    activateCost: 1,
     effect: (game, owner) => game.drawCards(owner, 2)
   },
   "要塞砲台": {
-    id: "要塞砲台", name: "要塞砲台", cost: 5, type: "field",
+    id: "要塞砲台", name: "要塞砲台", cost: 3, type: "field",
     effectText: "起動：コスト1を支払い、相手のユニット1体またはプレイヤーに2ダメージ。",
     activateCost: 1,
     needsTargetOrPlayer: true,
@@ -395,10 +402,10 @@ const CARD_POOL = {
     effect: (game, owner) => game.drawCards(owner, 1)
   },
   "兵舎": {
-    id: "兵舎", name: "兵舎", cost: 4, type: "field",
-    effectText: "起動：コスト2を支払い、下級兵士を1枚場に出す。",
+    id: "兵舎", name: "兵舎", cost: 3, type: "field",
+    effectText: "起動：コスト2を支払い、槍兵を1枚場に出す。",
     activateCost: 2,
-    effect: (game, owner) => game.summonToken(owner, "下級兵士")
+    effect: (game, owner) => game.summonToken(owner, "槍兵")
   },
   "王直属近衛": {
     id: "王直属近衛", name: "王直属近衛", cost: 5, type: "unit", atk: 4, hp: 5,
@@ -431,8 +438,8 @@ const CARD_POOL = {
   },
   "魔法砲台": {
     id: "魔法砲台", name: "魔法砲台", cost: 4, type: "field",
-    effectText: "起動：コスト2を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
-    activateCost: 2,
+    effectText: "起動：コスト1を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
+    activateCost: 1,
     needsTargetOrPlayer: true,
     effect: (game, owner, targetUid) => {
       if (targetUid === "player") game.damagePlayer(owner === "player" ? "enemy" : "player", 3);
@@ -616,33 +623,50 @@ const RARITY_LABEL = {
 };
 
 function getRewardCards(ownedIds) {
-  const owned = new Set(ownedIds);
-  const unowned = Object.keys(CARD_POOL).filter(id => !owned.has(id));
-  const weight = (id) => {
-    const r = getRarity(id);
-    if (r === "legend") return 1;
-    if (r === "ultimate") return 3;
-    if (r === "epic") return 5;
-    return 2;
-  };
-  const pool = unowned.length > 0 ? unowned : Object.keys(CARD_POOL);
-  const picked = [];
-  const used = new Set();
-  const maxTypes = Math.min(4, pool.length);
-  for (let t = 0; t < maxTypes; t++) {
-    const candidates = pool.filter(id => !used.has(id));
-    if (!candidates.length) break;
-    const totalW = candidates.reduce((s, id) => s + weight(id), 0);
-    let r = Math.random() * totalW;
-    let chosen = candidates[0];
-    for (const id of candidates) {
-      r -= weight(id);
-      if (r <= 0) { chosen = id; break; }
+  // 所持が2枚未満のカードから5枚（枠ごとレアリティ抽選）
+  const counts = {};
+  ownedIds.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+  const available = Object.keys(CARD_POOL).filter(id => (counts[id] || 0) < 2);
+
+  function pickByRates(pool, rates) {
+    // rates: { normal: 0.3, epic: 0.55, ... }
+    const byR = { normal: [], epic: [], ultimate: [], legend: [] };
+    pool.forEach(id => {
+      const r = getRarity(id);
+      if (byR[r]) byR[r].push(id);
+    });
+    let roll = Math.random();
+    let chosenRarity = "epic";
+    let acc = 0;
+    for (const [r, p] of Object.entries(rates)) {
+      acc += p;
+      if (roll <= acc) { chosenRarity = r; break; }
     }
-    used.add(chosen);
-    picked.push(chosen, chosen);
+    let candidates = byR[chosenRarity];
+    if (!candidates || !candidates.length) {
+      candidates = pool;
+    }
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  return picked;
+
+  const rates1to4 = { normal: 0.30, epic: 0.55, ultimate: 0.14, legend: 0.01 };
+  const rates5 = { normal: 0, epic: 0.75, ultimate: 0.24, legend: 0.01 };
+
+  const result = [];
+  const usedThisPack = {};
+  for (let i = 0; i < 5; i++) {
+    const rates = i < 4 ? rates1to4 : rates5;
+    let pool = available.filter(id => (usedThisPack[id] || 0) + (counts[id] || 0) < 2);
+    if (!pool.length) pool = Object.keys(CARD_POOL);
+    const id = pickByRates(pool, rates);
+    if (id) {
+      result.push(id);
+      usedThisPack[id] = (usedThisPack[id] || 0) + 1;
+      counts[id] = (counts[id] || 0) + 1;
+    }
+  }
+  return result;
 }
 
 function calcClearScore(winStreak, enemyPower) {

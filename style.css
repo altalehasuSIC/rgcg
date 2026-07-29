@@ -311,69 +311,48 @@ h3 {
   border-color: rgba(100, 180, 255, 0.3);
 }
 
-/* ===== カード ===== */
+
+/* ===== カード（ハースストーン風） ===== */
 .card {
-  width: 128px;
+  width: 118px;
   min-height: 168px;
-  background: linear-gradient(165deg, #2a2a4a 0%, #1a1a32 100%);
+  background: linear-gradient(180deg, #3d2b1f 0%, #2a1a12 40%, #1a100c 100%);
   border-radius: 12px;
-  border: 3px solid #555;
-  padding: 6px;
+  border: 3px solid #c9a227;
+  padding: 0;
   cursor: pointer;
   position: relative;
   transition: transform 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
   user-select: none;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.3);
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+  transform: translateY(-8px) scale(1.04);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.6);
   z-index: 5;
 }
 
-.card.selected {
+.card.selected, .card.tap-armed {
   border-color: #ffd700 !important;
-  box-shadow: 0 0 14px rgba(255, 215, 0, 0.7);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.75);
   transform: translateY(-6px);
 }
 
-/* 枠色：ユニット=青、スペル=緑、フィールド=赤 */
-.card.unit {
-  border-color: #3a8ee6;
-  box-shadow: 0 0 0 1px rgba(58, 142, 230, 0.3);
-}
-
-.card.spell {
-  border-color: #2ecc71;
-  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.3);
-}
-
-.card.field-card {
-  border-color: #e74c3c;
-  box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.3);
-}
+.card.unit { border-color: #4a90d9; }
+.card.spell { border-color: #2ecc71; }
+.card.field-card { border-color: #e74c3c; }
 
 .card.exhausted {
   opacity: 0.5;
-  filter: grayscale(0.5);
+  filter: grayscale(0.45);
 }
 
 .card.can-play {
-  box-shadow: 0 0 12px rgba(80, 200, 120, 0.55);
-}
-
-.card.can-play.unit {
-  border-color: #5eb0ff;
-}
-
-.card.can-play.spell {
-  border-color: #58d68d;
-}
-
-.card.can-play.field-card {
-  border-color: #ff6b6b;
+  box-shadow: 0 0 14px rgba(80, 200, 120, 0.55);
 }
 
 .card.targetable {
@@ -381,130 +360,157 @@ h3 {
   animation: pulse 0.8s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(255, 204, 0, 0.5); }
-  50% { box-shadow: 0 0 18px rgba(255, 204, 0, 0.95); }
-}
-
-/* コスト（左上） */
+/* コスト宝石（左上） */
 .card .cost {
   position: absolute;
   top: 4px;
   left: 4px;
   width: 28px;
   height: 28px;
-  background: linear-gradient(145deg, #e94560, #c0392b);
-  border-radius: 50%;
+  background: linear-gradient(145deg, #5dade2, #2874a6);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 1rem;
-  border: 2px solid #ff8a8a;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  border: 2px solid #aed6f1;
+  z-index: 3;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* アート領域 */
+.card .card-art {
+  height: 72px;
+  margin: 8px 6px 0;
+  border-radius: 50% 50% 40% 40% / 45% 45% 40% 40%;
+  border: 2px solid #8b7355;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  position: relative;
+  overflow: hidden;
+}
+.card.unit .card-art {
+  background: radial-gradient(circle at 40% 30%, #5dade2, #1a5276 70%);
+}
+.card.spell .card-art {
+  background: radial-gradient(circle at 40% 30%, #58d68d, #1e8449 70%);
+}
+.card.field-card .card-art {
+  background: radial-gradient(circle at 40% 30%, #f1948a, #922b21 70%);
 }
 
 .card .kw-icons {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   display: flex;
   gap: 2px;
-  z-index: 2;
-  font-size: 0.9rem;
-  line-height: 1;
+  z-index: 3;
+  font-size: 0.85rem;
 }
 
-.card .kw-icon {
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
-}
-
+/* 名前バナー */
 .card .name {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: bold;
   text-align: center;
-  margin-top: 28px;
-  margin-bottom: 2px;
-  line-height: 1.2;
-  padding: 0 2px;
+  margin: -6px 4px 0;
+  padding: 3px 4px;
+  line-height: 1.15;
+  background: linear-gradient(180deg, #6d5a3e, #3e2f1e);
+  border: 1px solid #c9a227;
+  border-radius: 4px;
+  position: relative;
+  z-index: 2;
+  color: #f5e6c8;
+  text-shadow: 0 1px 2px #000;
 }
 
 .card .type-label {
-  font-size: 0.62rem;
+  font-size: 0.55rem;
   text-align: center;
-  margin-bottom: 4px;
-  font-weight: bold;
-  letter-spacing: 0.05em;
+  color: #c4b59a;
+  margin: 2px 0 0;
+  letter-spacing: 0.04em;
 }
 
-.card.unit .type-label { color: #7ec8ff; }
-.card.spell .type-label { color: #58d68d; }
-.card.field-card .type-label { color: #ff8a8a; }
-
 .card .effect {
-  font-size: 0.62rem;
-  color: #bbb;
-  line-height: 1.3;
-  margin-top: 2px;
+  font-size: 0.58rem;
+  color: #e8dcc8;
+  line-height: 1.25;
+  margin: 2px 6px;
   flex-grow: 1;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  padding: 0 2px;
+  text-align: center;
 }
 
-/* ATK / HP バッジ（下部） */
+/* ATK / HP 盾・剣（下部） */
 .card .stats {
   margin-top: auto;
   display: flex;
   justify-content: space-between;
-  gap: 4px;
-  padding: 4px 2px 2px;
+  padding: 0 4px 4px;
+  position: relative;
 }
 
 .card .stats .stat-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-width: 48px;
-  padding: 4px 6px;
-  border-radius: 8px;
-  font-size: 1rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.95rem;
   font-weight: bold;
   line-height: 1;
+  text-shadow: 0 1px 2px #000;
+  border: 2px solid;
 }
 
 .card .stats .atk {
-  background: rgba(58, 142, 230, 0.3);
-  color: #7ec8ff;
-  border: 1.5px solid #3a8ee6;
+  background: linear-gradient(145deg, #7f8c8d, #2c3e50);
+  color: #ecf0f1;
+  border-color: #bdc3c7;
+  clip-path: none;
+  border-radius: 4px 4px 8px 8px;
 }
 
 .card .stats .hp {
-  background: rgba(46, 204, 113, 0.25);
-  color: #58d68d;
-  border: 1.5px solid #2ecc71;
+  background: linear-gradient(145deg, #e74c3c, #922b21);
+  color: #fff;
+  border-color: #f5b7b1;
+  border-radius: 50%;
 }
 
 .card .stats .hp.damaged {
-  background: rgba(255, 140, 0, 0.3);
-  color: #ffb347;
-  border-color: #ff8c00;
+  background: linear-gradient(145deg, #f39c12, #d35400);
+  border-color: #f9e79f;
 }
 
 .card .stats .hp.critical {
-  background: rgba(220, 50, 50, 0.4);
-  color: #ff6b6b;
-  border-color: #e74c3c;
+  background: linear-gradient(145deg, #c0392b, #7b241c);
   animation: hp-pulse 1s infinite;
 }
 
-@keyframes hp-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
+.rarity-row {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 4px;
+  margin-top: -2px;
+}
+.rarity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.4);
 }
 
 /* ツールチップ */
@@ -515,44 +521,17 @@ h3 {
   left: 50%;
   transform: translateX(-50%);
   width: 220px;
-  background: #12122a;
-  border: 2px solid #4a9eff;
-  border-radius: 12px;
+  background: #1a120a;
+  border: 2px solid #c9a227;
+  border-radius: 10px;
   padding: 12px;
   z-index: 200;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   text-align: left;
 }
+.card:hover .card-tooltip { display: block; }
 
-.card:hover .card-tooltip {
-  display: block;
-}
-
-.card-tooltip .tt-name {
-  font-weight: bold;
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-}
-
-.card-tooltip .tt-meta {
-  font-size: 0.78rem;
-  color: #a0c4ff;
-  margin-bottom: 6px;
-}
-
-.card-tooltip .tt-stats {
-  font-size: 0.88rem;
-  margin-bottom: 6px;
-}
-
-.card-tooltip .tt-effect {
-  font-size: 0.78rem;
-  color: #ccc;
-  line-height: 1.4;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  padding-top: 6px;
-}
 
 /* 手札 */
 .hand-section {
@@ -1194,4 +1173,95 @@ h3 {
     position: relative;
     margin: 8px 0 0;
   }
+}
+
+
+/* ===== シャドウバース風バトルレイアウト ===== */
+#battle-screen {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(40, 60, 100, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(60, 40, 80, 0.35) 0%, transparent 45%),
+    linear-gradient(180deg, #0d1b2a 0%, #1b2838 40%, #16213e 70%, #0f1420 100%);
+  overflow: hidden;
+}
+
+#battle-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(0,0,0,0.35) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#battle-screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+.top-bar {
+  background: transparent;
+  gap: 10px;
+}
+
+.status-block {
+  background: rgba(10, 15, 30, 0.75);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+}
+
+.player-status {
+  border: 2px solid rgba(74, 158, 255, 0.55);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.15);
+}
+
+.enemy-status {
+  border: 2px solid rgba(233, 69, 96, 0.55);
+  box-shadow: 0 0 12px rgba(233, 69, 96, 0.15);
+}
+
+.field {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  justify-content: center;
+  min-height: 130px;
+}
+
+.enemy-field .field {
+  border-color: rgba(233, 100, 100, 0.25);
+  background: rgba(80, 20, 30, 0.15);
+}
+
+.player-field .field {
+  border-color: rgba(80, 140, 255, 0.25);
+  background: rgba(20, 40, 80, 0.15);
+}
+
+.hand-area {
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.35));
+  border-radius: 12px 12px 0 0;
+  border: none;
+  padding-top: 12px;
+}
+
+#turn-indicator {
+  display: inline-block;
+  padding: 6px 20px;
+  background: linear-gradient(180deg, #3a5a8c, #1e3a5f);
+  border: 2px solid #7eb0ff;
+  border-radius: 20px;
+  box-shadow: 0 0 12px rgba(100, 160, 255, 0.35);
+  color: #d0e6ff;
+  font-size: 1rem;
+}
+
+.action-bar .btn.primary {
+  background: linear-gradient(180deg, #4a90d9, #2a5a9a);
+  border: 2px solid #7eb0ff;
+  border-radius: 50px;
+  font-weight: bold;
+  min-width: 120px;
 }

@@ -386,7 +386,7 @@ class Game {
 
     const p = who === "player" ? this.player : this.enemy;
 
-    p.maxMana = Math.min(8, p.maxMana + 1);
+    p.maxMana = Math.min(10, p.maxMana + 1);
     p.mana = p.maxMana;
     p.field.forEach(c => {
       c.exhausted = false;
@@ -540,6 +540,46 @@ class Game {
     this.log(`${card.name}は破壊された。`);
     this.checkDeaths();
   }
+
+  buffUnit(uid, atkBonus, hpBonus) {
+    let card = this.player.field.find(c => c.uid === uid);
+    if (!card) card = this.enemy.field.find(c => c.uid === uid);
+    if (!card || card.type !== "unit") return;
+    card.atk += atkBonus;
+    card.hp += hpBonus;
+    card.maxHp += hpBonus;
+    this.log(`${card.name}に攻撃+${atkBonus} 体力+${hpBonus}`);
+  }
+
+  giveCharge(uid) {
+    let card = this.player.field.find(c => c.uid === uid);
+    if (!card) card = this.enemy.field.find(c => c.uid === uid);
+    if (!card || card.type !== "unit") return;
+    card.charge = true;
+    card.exhausted = false;
+    this.log(`${card.name}に突撃を付与`);
+  }
+
+  destroyAny(uid) {
+    let card = this.player.field.find(c => c.uid === uid);
+    let who = "player";
+    if (!card) {
+      card = this.enemy.field.find(c => c.uid === uid);
+      who = "enemy";
+    }
+    if (!card) return;
+    if (card.type === "unit") {
+      card.hp = 0;
+      this.log(`${card.name}は破壊された。`);
+      this.checkDeaths();
+    } else {
+      const p = who === "player" ? this.player : this.enemy;
+      p.field = p.field.filter(c => c.uid !== uid);
+      p.grave.push(card);
+      this.log(`${card.name}（フィールド）は破壊された。`);
+    }
+  }
+
 
   // ========== カードプレイ ==========
   tryPlayCard(cardUid) {
@@ -695,6 +735,19 @@ class Game {
       this.updateUI();
       return;
     }
+    // 訓練所など：味方ユニット対象
+    if (def.needsTargetAlly) {
+      const allies = this.player.field.filter(c => c.type === "unit");
+      if (!allies.length) {
+        this.log("対象となる味方ユニットがいません。");
+        return;
+      }
+      this.pendingTarget = { type: "fieldTargetAlly", fieldUid: cardUid, cost };
+      this.log("対象の味方ユニットを選択してください。");
+      this.updateCancelButton();
+      this.updateUI();
+      return;
+    }
 
     this.player.mana -= cost;
     this.log(`${card.name}を起動した。`);
@@ -705,7 +758,8 @@ class Game {
   }
 
   resolveFieldTarget(targetUid) {
-    if (!this.pendingTarget || this.pendingTarget.type !== "fieldTargetOrPlayer") return;
+    if (!this.pendingTarget) return;
+    if (this.pendingTarget.type !== "fieldTargetOrPlayer" && this.pendingTarget.type !== "fieldTargetAlly") return;
     const { fieldUid, cost } = this.pendingTarget;
     const card = this.player.field.find(c => c.uid === fieldUid);
     if (!card) {
@@ -856,7 +910,16 @@ class Game {
     const gained = calcClearScore(this.winStreak, enemyPower);
     this.runScore += gained;
     this.log(`敵を倒した！ 連勝: ${this.winStreak} / スコア+${gained}`);
-    const rewards = getRewardCards(this.collection);
+    let rewards = getRewardCards(this.collection);
+    // 10勝ごとにレジェンド1枚保証
+    if (this.winStreak % 10 === 0) {
+      const counts = {};
+      this.collection.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+      const legs = Object.keys(CARD_POOL).filter(id => getRarity(id) === "legend" && (counts[id] || 0) < 2);
+      if (legs.length) {
+        rewards[4] = legs[Math.floor(Math.random() * legs.length)];
+      }
+    }
     this.collection.push(...rewards);
     this.hasActiveRun = true;
 
@@ -894,13 +957,27 @@ class Game {
     if (this.checkWinLose()) return;
     const e = this.enemy;
 
+    // 優先度: 高コスト＋除去・全体ダメ・回復をやや優先
+    const scoreCard = (c) => {
+      let s = c.cost * 10;
+      const def = CARD_POOL[c.cardId];
+      if (!def) return s;
+      const tx = def.effectText || "";
+      if (tx.includes("破壊")) s += 25;
+      if (tx.includes("全てに")) s += 20;
+      if (tx.includes("回復")) s += 8;
+      if (c.rush || c.charge) s += 12;
+      if (c.guard) s += 10;
+      if (c.type === "unit") s += (c.atk + c.hp);
+      return s;
+    };
     const playable = e.hand
       .filter(c => c.cost <= e.mana)
       .filter(c => {
         if (c.type === "unit" || c.type === "field") return e.field.length < 5;
         return true;
       })
-      .sort((a, b) => b.cost - a.cost);
+      .sort((a, b) => scoreCard(b) - scoreCard(a));
 
     for (const card of [...playable]) {
       if (e.mana < card.cost) continue;
@@ -969,25 +1046,40 @@ class Game {
     if (this.checkWinLose()) return;
 
     const attackers = e.field.filter(c => c.type === "unit" && !c.exhausted);
+    // フェイスで倒せるなら優先
+    const totalAtk = attackers.reduce((s, a) => {
+      if (a.charge && !a.rush && a._summonTurnFaceBlock) return s;
+      return s + a.atk;
+    }, 0);
+    const canLethal = !this.playerHasGuard() && totalAtk >= this.player.hp;
+
     for (const atk of attackers) {
       let targets = this.player.field.filter(c => c.type === "unit");
-      // 護衛がいれば護衛を優先（プレイヤー攻撃不可）
       const guards = targets.filter(c => c.guard);
       if (guards.length > 0) targets = guards;
 
-      if (targets.length > 0) {
-        targets.sort((a, b) => a.hp - b.hp);
-        const t = targets[0];
+      const faceBlocked = this.playerHasGuard() || (atk.charge && !atk.rush && atk._summonTurnFaceBlock);
+
+      if (canLethal && !faceBlocked && !guards.length) {
+        this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
+        this.player.hp -= atk.atk;
+        atk.exhausted = true;
+      } else if (targets.length > 0) {
+        // 有利交換: 倒せる中で最も脅威（攻高）を優先、なければ低体力
+        const killable = targets.filter(u => u.hp <= atk.atk);
+        let t;
+        if (killable.length) {
+          killable.sort((a, b) => (b.atk - a.atk) || (a.hp - b.hp));
+          t = killable[0];
+        } else {
+          targets.sort((a, b) => a.hp - b.hp);
+          t = targets[0];
+        }
         this.log(`敵の${atk.name}が${t.name}に攻撃！`);
         t.hp -= atk.atk;
         atk.hp -= t.atk;
         atk.exhausted = true;
-      } else if (!this.playerHasGuard()) {
-        // 突撃のみは出たターンにプレイヤー攻撃しない
-        if (atk.charge && !atk.rush && atk._summonTurnFaceBlock) {
-          atk.exhausted = true;
-          continue;
-        }
+      } else if (!faceBlocked) {
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;
         atk.exhausted = true;
@@ -1030,7 +1122,7 @@ class Game {
     const pipsEl = document.getElementById("player-mana-pips");
     if (pipsEl) {
       pipsEl.innerHTML = "";
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 10; i++) {
         const pip = document.createElement("div");
         pip.className = "mana-pip";
         if (i < this.player.mana) {
@@ -1109,9 +1201,12 @@ class Game {
       if (this.selectedUnitUid === c.uid) el.classList.add("selected");
 
       // 味方対象選択中
-      if (this.pendingTarget && this.pendingTarget.type === "playOnPlayAlly" && c.type === "unit") {
+      if (this.pendingTarget && (this.pendingTarget.type === "playOnPlayAlly" || this.pendingTarget.type === "fieldTargetAlly") && c.type === "unit") {
         el.classList.add("targetable");
-        el.onclick = () => this.resolvePlayWithTarget(c.uid);
+        el.onclick = () => {
+          if (this.pendingTarget.type === "fieldTargetAlly") this.resolveFieldTarget(c.uid);
+          else this.resolvePlayWithTarget(c.uid);
+        };
       } else {
         el.onclick = () => {
           if (this.pendingTarget && this.pendingTarget.type === "attack") return;
@@ -1137,9 +1232,13 @@ class Game {
         if (this.pendingTarget.type === "attack" && c.type === "unit") {
           el.classList.add("targetable");
           el.onclick = () => this.attackUnit(c.uid);
-        } else if ((this.pendingTarget.type === "playOnPlay" || this.pendingTarget.type === "spellTarget") && c.type === "unit") {
-          el.classList.add("targetable");
-          el.onclick = () => this.resolvePlayWithTarget(c.uid);
+        } else if ((this.pendingTarget.type === "playOnPlay" || this.pendingTarget.type === "spellTarget")) {
+          const def = CARD_POOL[this.player.hand[this.pendingTarget.handIdx]?.cardId];
+          const allowField = def && def.canTargetField;
+          if (c.type === "unit" || (allowField && c.type === "field")) {
+            el.classList.add("targetable");
+            el.onclick = () => this.resolvePlayWithTarget(c.uid);
+          }
         } else if (this.pendingTarget.type === "fieldTargetOrPlayer" && c.type === "unit") {
           el.classList.add("targetable");
           el.onclick = () => this.resolveFieldTarget(c.uid);
@@ -1182,8 +1281,8 @@ class Game {
       const hpText = card.hp < maxHp ? `${card.hp}/${maxHp}` : `${card.hp}`;
       statsHtml = `
         <div class="stats">
-          <span class="atk stat-badge">⚔ ${card.atk}</span>
-          <span class="${hpClass}">❤ ${hpText}</span>
+          <span class="atk stat-badge">${card.atk}</span>
+          <span class="${hpClass}">${hpText}</span>
         </div>`;
       tooltipStats = `<div class="tt-stats">攻撃力 <strong style="color:#ff8a8a">${card.atk}</strong>　/　体力 <strong style="color:#8aff8a">${card.hp}</strong>${card.hp < maxHp ? " / " + maxHp : ""}</div>`;
       const kws = [];
@@ -1200,9 +1299,18 @@ class Game {
     const rarity = card.rarity || "normal";
     const rarityLabel = (typeof RARITY_LABEL !== "undefined" && RARITY_LABEL[rarity]) ? RARITY_LABEL[rarity] : rarity;
 
+    // アート用アイコン
+    let artIcon = "⚔️";
+    if (card.type === "spell") artIcon = "📜";
+    else if (card.type === "field") artIcon = "🏰";
+    else if (card.guard) artIcon = "🛡️";
+    else if (card.rush) artIcon = "💨";
+    else if (card.charge) artIcon = "✊";
+
     el.innerHTML = `
       <div class="cost">${card.cost}</div>
       ${iconHtml}
+      <div class="card-art">${artIcon}</div>
       <div class="name">${card.name}</div>
       <div class="type-label">${typeLabel}</div>
       <div class="effect">${card.effectText || ""}</div>
