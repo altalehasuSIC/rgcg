@@ -405,6 +405,10 @@ class Game {
     this.pendingTarget = null;
     this.updateCancelButton();
 
+    if (who === "player") {
+      this.battleTurn = (this.battleTurn || 0) + 1;
+    }
+
     const p = who === "player" ? this.player : this.enemy;
 
     p.maxMana = Math.min(10, p.maxMana + 1);
@@ -568,6 +572,20 @@ class Game {
     p.hp -= amount;
     this.log(`${who === "player" ? "あなた" : "敵"}に${amount}ダメージ！（残り${Math.max(0, p.hp)}）`);
   }
+
+  destroyRandomField(who) {
+    const p = who === "player" ? this.player : this.enemy;
+    const fields = p.field.filter(c => c.type === "field");
+    if (!fields.length) {
+      this.log("破壊できるフィールドがなかった。");
+      return;
+    }
+    const card = fields[Math.floor(Math.random() * fields.length)];
+    p.field = p.field.filter(c => c.uid !== card.uid);
+    p.grave.push(card);
+    this.log(`${card.name}（フィールド）は破壊された。`);
+  }
+
 
   buffAllUnits(who, atkBonus, hpBonus) {
     const p = who === "player" ? this.player : this.enemy;
@@ -1070,7 +1088,124 @@ class Game {
   }
 
   // ========== 敵AI ==========
+
+  triggerEnemySpecials() {
+    const battleNum = (this.winStreak || 0) + 1;
+    const turn = this.battleTurn || 1;
+    if (!this.enemySpecialDone) this.enemySpecialDone = {};
+    const key = `${battleNum}_${turn}`;
+    if (this.enemySpecialDone[key]) return;
+    if (battleNum < 15) return;
+
+    const e = this.enemy;
+    const mark = () => { this.enemySpecialDone[key] = true; };
+
+    const addToHand = (cardId) => {
+      const c = createCardInstance(cardId, "enemy");
+      if (!c) return false;
+      e.hand.push(c);
+      this.log(`【敵の特殊】${c.name}が手札に加わった。`);
+      return true;
+    };
+    const summon = (cardId) => {
+      const ok = this.summonToken("enemy", cardId);
+      if (ok) this.log(`【敵の特殊】${(CARD_POOL[cardId] && CARD_POOL[cardId].name) || cardId}が場に出た。`);
+      return ok;
+    };
+
+    if (battleNum >= 15 && battleNum <= 29) {
+      if (turn === 3) {
+        mark();
+        addToHand(Math.random() < 0.5 ? "矢倉" : "監視塔");
+      } else if (turn === 6) {
+        mark();
+        const opts = [
+          () => summon("鉄壁の守備兵"),
+          () => summon("軍団兵"),
+          () => addToHand("戦術爆撃"),
+          () => addToHand("処刑"),
+        ];
+        opts[Math.floor(Math.random() * opts.length)]();
+      }
+    } else if (battleNum >= 30 && battleNum <= 49) {
+      if (turn === 3) {
+        mark();
+        summon("槍兵");
+      } else if (turn === 5) {
+        mark();
+        const opts = [
+          () => summon("鉄壁の守備兵"),
+          () => summon("軍団兵"),
+          () => addToHand("再生の儀式"),
+        ];
+        opts[Math.floor(Math.random() * opts.length)]();
+      } else if (turn === 8) {
+        mark();
+        const r = Math.floor(Math.random() * 3);
+        if (r === 0) {
+          this.player.field.filter(c => c.type === "unit").forEach(c => { c.hp = 0; });
+          this.log("【敵の特殊】あなたのユニットが全て破壊された！");
+          this.checkDeaths();
+        } else if (r === 1) {
+          this.healPlayer("enemy", 6);
+          this.log("【敵の特殊】敵の体力が6回復した。");
+        } else {
+          this.damagePlayer("player", 4);
+          this.log("【敵の特殊】あなたに4ダメージ！");
+        }
+      }
+    } else if (battleNum >= 50) {
+      if (turn === 1) {
+        mark();
+        if (e.field.length < 5) {
+          const c = createCardInstance("徴兵施設", "enemy");
+          if (c) {
+            e.field.push(c);
+            this.log("【敵の特殊】徴兵施設が場に出た。");
+          }
+        }
+      } else if (turn === 3) {
+        mark();
+        summon("無双の将校");
+      } else if (turn === 5) {
+        mark();
+        summon("兵団長");
+      } else if (turn === 6) {
+        mark();
+        summon(Math.random() < 0.5 ? "精鋭槍兵" : "大盾兵");
+      } else if (turn === 8) {
+        mark();
+        const r = Math.floor(Math.random() * 3);
+        if (r === 0) {
+          this.player.field.filter(c => c.type === "unit").forEach(c => { c.hp = 0; });
+          this.log("【敵の特殊】あなたのユニットが全て破壊された！");
+          this.checkDeaths();
+        } else if (r === 1) {
+          this.healPlayer("enemy", 6);
+          this.log("【敵の特殊】敵の体力が6回復した。");
+        } else {
+          this.damagePlayer("player", 4);
+          this.log("【敵の特殊】あなたに4ダメージ！");
+        }
+      } else if (turn === 10) {
+        mark();
+        this.healPlayer("enemy", 5);
+        const units = this.player.field.filter(c => c.type === "unit");
+        if (units.length) {
+          const u = units[Math.floor(Math.random() * units.length)];
+          u.hp = 0;
+          this.log(`【敵の特殊】${u.name}が破壊された！`);
+          this.checkDeaths();
+        }
+        this.damagePlayer("player", 5);
+        this.log("【敵の特殊】敵が体力5回復し、あなたに5ダメージ！");
+      }
+    }
+  }
+
   enemyAI() {
+    if (this.checkWinLose()) return;
+    this.triggerEnemySpecials();
     if (this.checkWinLose()) return;
     const e = this.enemy;
 
@@ -1152,10 +1287,11 @@ class Game {
 
     const attackers = e.field.filter(c => c.type === "unit" && !c.exhausted);
     // フェイスで倒せるなら優先
-    const totalAtk = attackers.reduce((s, a) => {
-      if (a.charge && !a.rush && a._summonTurnFaceBlock) return s;
-      return s + a.atk;
-    }, 0);
+    const faceReady = attackers.filter(a => {
+      if (a.charge && !a.rush && a._summonTurnFaceBlock) return false;
+      return true;
+    });
+    const totalAtk = faceReady.reduce((s, a) => s + a.atk, 0);
     const canLethal = !this.playerHasGuard() && totalAtk >= this.player.hp;
 
     for (const atk of attackers) {
@@ -1165,25 +1301,43 @@ class Game {
 
       const faceBlocked = this.playerHasGuard() || (atk.charge && !atk.rush && atk._summonTurnFaceBlock);
 
-      if (canLethal && !faceBlocked && !guards.length) {
+      if (canLethal && !faceBlocked && guards.length === 0) {
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;
         atk.exhausted = true;
       } else if (targets.length > 0) {
-        // 有利交換: 倒せる中で最も脅威（攻高）を優先、なければ低体力
+        // 有利交換のみ：倒せる、または相打ちで相手の方が脅威
+        // 「自分だけ失う」交換はしない → フェイス可能な場合はフェイスへ
         const killable = targets.filter(u => u.hp <= atk.atk);
-        let t;
+        let t = null;
         if (killable.length) {
+          // 倒せる中で最も脅威（攻撃高）を優先。反撃で死ぬ場合は、相手の方が高攻撃なら許容
           killable.sort((a, b) => (b.atk - a.atk) || (a.hp - b.hp));
-          t = killable[0];
-        } else {
-          targets.sort((a, b) => a.hp - b.hp);
-          t = targets[0];
+          for (const cand of killable) {
+            const wouldDie = atk.hp <= cand.atk;
+            if (!wouldDie) { t = cand; break; }
+            // 相打ち：相手の攻撃が自分以上なら交換する価値あり
+            if (cand.atk >= atk.atk) { t = cand; break; }
+          }
         }
-        this.log(`敵の${atk.name}が${t.name}に攻撃！`);
-        t.hp -= atk.atk;
-        atk.hp -= t.atk;
-        atk.exhausted = true;
+        if (!t) {
+          // 倒せない対象への攻撃＝自分が一方的に削られるだけなら避ける
+          // フェイス可能ならフェイス
+          if (!faceBlocked) {
+            this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
+            this.player.hp -= atk.atk;
+            atk.exhausted = true;
+          } else {
+            // 護衛でフェイス不可かつ不利交換しかない → 攻撃しない
+            this.log(`敵の${atk.name}は不利な攻撃を見送った。`);
+            atk.exhausted = true;
+          }
+        } else {
+          this.log(`敵の${atk.name}が${t.name}に攻撃！`);
+          t.hp -= atk.atk;
+          atk.hp -= t.atk;
+          atk.exhausted = true;
+        }
       } else if (!faceBlocked) {
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;

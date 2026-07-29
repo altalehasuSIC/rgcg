@@ -42,7 +42,7 @@ const CARD_POOL = {
     id: "中級兵士", name: "中級兵士", cost: 3, type: "unit", atk: 3, hp: 3, effectText: ""
   },
   "徴兵施設": {
-    id: "徴兵施設", name: "徴兵施設", cost: 2, type: "field",
+    id: "徴兵施設", name: "徴兵施設", cost: 3, type: "field",
     effectText: "起動：コスト1を支払い民兵を1枚場に出す。",
     activateCost: 1,
     effect: (game, owner) => game.summonToken(owner, "民兵")
@@ -270,10 +270,11 @@ const CARD_POOL = {
   },
   "落石": {
     id: "落石", name: "落石", cost: 4, type: "spell",
-    effectText: "相手プレイヤーに4ダメージ。",
+    effectText: "相手プレイヤーに4ダメージ。相手のランダムなフィールドを1つ破壊する。",
     effect: (game, owner) => {
       const enemy = owner === "player" ? "enemy" : "player";
       game.damagePlayer(enemy, 4);
+      game.destroyRandomField(enemy);
     }
   },
   "全滅の計": {
@@ -304,7 +305,7 @@ const CARD_POOL = {
 
   // ========== 新規フィールド（5種） ==========
   "野戦病院": {
-    id: "野戦病院", name: "野戦病院", cost: 1, type: "field",
+    id: "野戦病院", name: "野戦病院", cost: 3, type: "field",
     effectText: "起動：コスト1を支払い、自分の体力を2回復。",
     activateCost: 1,
     effect: (game, owner) => game.healPlayer(owner, 2)
@@ -332,12 +333,12 @@ const CARD_POOL = {
   },
   "補給基地": {
     id: "補給基地", name: "補給基地", cost: 4, type: "field",
-    effectText: "起動：コスト1を支払い、カードを2枚引く。",
-    activateCost: 1,
+    effectText: "起動：コスト2を支払い、カードを2枚引く。",
+    activateCost: 2,
     effect: (game, owner) => game.drawCards(owner, 2)
   },
   "要塞砲台": {
-    id: "要塞砲台", name: "要塞砲台", cost: 3, type: "field",
+    id: "要塞砲台", name: "要塞砲台", cost: 4, type: "field",
     effectText: "起動：コスト1を支払い、相手のユニット1体またはプレイヤーに2ダメージ。",
     activateCost: 1,
     needsTargetOrPlayer: true,
@@ -397,12 +398,12 @@ const CARD_POOL = {
   },
   "監視塔": {
     id: "監視塔", name: "監視塔", cost: 2, type: "field",
-    effectText: "起動：コスト1を支払い、カードを1枚引く。",
-    activateCost: 1,
+    effectText: "起動：コスト2を支払い、カードを1枚引く。",
+    activateCost: 2,
     effect: (game, owner) => game.drawCards(owner, 1)
   },
   "兵舎": {
-    id: "兵舎", name: "兵舎", cost: 3, type: "field",
+    id: "兵舎", name: "兵舎", cost: 4, type: "field",
     effectText: "起動：コスト2を支払い、槍兵を1枚場に出す。",
     activateCost: 2,
     effect: (game, owner) => game.summonToken(owner, "槍兵")
@@ -437,9 +438,9 @@ const CARD_POOL = {
     }
   },
   "魔法砲台": {
-    id: "魔法砲台", name: "魔法砲台", cost: 4, type: "field",
-    effectText: "起動：コスト1を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
-    activateCost: 1,
+    id: "魔法砲台", name: "魔法砲台", cost: 5, type: "field",
+    effectText: "起動：コスト2を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
+    activateCost: 2,
     needsTargetOrPlayer: true,
     effect: (game, owner, targetUid) => {
       if (targetUid === "player") game.damagePlayer(owner === "player" ? "enemy" : "player", 3);
@@ -680,8 +681,77 @@ function getEnemyPower(streak) {
 let _enemyDeckCache = null;
 let _enemyDeckStreak = -1;
 
+/** 15〜29戦固定デッキ */
+const ENEMY_DECK_MID = [
+  "徴兵施設", "徴兵施設",
+  "名の知れた傭兵", "名の知れた傭兵",
+  "尖兵", "尖兵",
+  "槍兵", "槍兵",
+  "中級兵士", "中級兵士",
+  "不屈の護衛官", "不屈の護衛官",
+  "リクルート", "リクルート",
+  "破壊工作員", "破壊工作員",
+  "無双の将校", "無双の将校",
+  "全滅の計", "全滅の計",
+  "投石部隊", "投石部隊",
+  "荒くれものの頭", "荒くれものの頭",
+  "兵団長", "兵団長",
+  "破壊の巨人兵", "破壊の巨人兵",
+  "伝説級騎士団長", "伝説級騎士団長"
+];
+
+/** 30〜49戦固定デッキ */
+const ENEMY_DECK_LATE = [
+  "徴兵施設",
+  "野戦病院",
+  "名の知れた傭兵", "名の知れた傭兵",
+  "尖兵", "尖兵",
+  "槍兵", "槍兵",
+  "暗殺者", "暗殺者",
+  "不屈の護衛官", "不屈の護衛官",
+  "リクルート", "リクルート",
+  "破壊工作員", "破壊工作員",
+  "無双の将校", "無双の将校",
+  "戦術爆撃", "戦術爆撃",
+  "投石部隊", "投石部隊",
+  "荒くれものの頭", "荒くれものの頭",
+  "世界樹の砦", "世界樹の砦",
+  "破壊の巨人兵", "破壊の巨人兵",
+  "伝説級騎士団長", "伝説級騎士団長"
+];
+
+/** 50戦目以降固定デッキ */
+const ENEMY_DECK_END = [
+  "召集", "召集",
+  "補給", "補給",
+  "リクルート", "リクルート",
+  "再生の儀式", "再生の儀式",
+  "全滅の計", "全滅の計",
+  "戦術爆撃", "戦術爆撃",
+  "世界樹の砦", "世界樹の砦",
+  "兵団長", "兵団長",
+  "荒くれものの頭", "荒くれものの頭",
+  "銀の突撃兵", "銀の突撃兵",
+  "不滅の守護神", "不滅の守護神",
+  "伝説級騎士団長", "伝説級騎士団長",
+  "終末の宣告", "終末の宣告",
+  "破壊の巨人兵", "破壊の巨人兵",
+  "伝説の英雄", "伝説の英雄"
+];
+
+function rarityRank(id) {
+  const r = getRarity(id);
+  if (r === "legend") return 4;
+  if (r === "ultimate") return 3;
+  if (r === "epic") return 2;
+  return 1;
+}
+
+/**
+ * streak = 現在の連勝数（0 = 1戦目）
+ * battleNum = streak + 1
+ */
 function generateEnemyDeck(streak) {
-  // streak = 勝利数（次の敵の戦数目 - 1）。0=1戦目
   const battleNum = streak + 1;
 
   if (_enemyDeckCache && _enemyDeckStreak === streak) {
@@ -689,48 +759,39 @@ function generateEnemyDeck(streak) {
   }
 
   let deck;
-  if (!_enemyDeckCache || streak === 0) {
-    deck = [...INITIAL_DECK];
+
+  if (battleNum >= 50) {
+    deck = [...ENEMY_DECK_END];
+  } else if (battleNum >= 30) {
+    deck = [...ENEMY_DECK_LATE];
+  } else if (battleNum >= 15) {
+    deck = [...ENEMY_DECK_MID];
   } else {
-    deck = [..._enemyDeckCache];
-  }
+    // 1〜14戦目: 徐々に高レアに2枚ずつ交換
+    if (!_enemyDeckCache || streak === 0) {
+      deck = [...INITIAL_DECK];
+    } else {
+      deck = [..._enemyDeckCache];
+    }
+    // 2枚を高レアリティに交換
+    const byRarity = (minRank) => Object.keys(CARD_POOL).filter(id => rarityRank(id) >= minRank);
+    let upgradePool;
+    if (battleNum <= 4) upgradePool = byRarity(2); // epic+
+    else if (battleNum <= 9) upgradePool = byRarity(2).concat(byRarity(3));
+    else upgradePool = byRarity(2).concat(byRarity(3)).concat(byRarity(4));
+    if (!upgradePool.length) upgradePool = Object.keys(CARD_POOL);
 
-  const byRarity = (r) => Object.keys(CARD_POOL).filter(id => getRarity(id) === r);
-  const normalPool = byRarity("normal");
-  const epicPool = byRarity("epic");
-  const ultPool = byRarity("ultimate");
-  const legPool = byRarity("legend");
-
-  // 使用可能レアリティ
-  let upgradePool = [...normalPool];
-  if (battleNum >= 3) upgradePool = upgradePool.concat(epicPool);
-  if (battleNum >= 6) upgradePool = upgradePool.concat(ultPool);
-
-  // 差し替え 1〜2種（1戦目はなし）
-  const replaceCount = battleNum === 1 ? 0 : (1 + (Math.random() < 0.5 ? 1 : 0));
-  for (let i = 0; i < replaceCount && upgradePool.length > 0; i++) {
-    const newId = upgradePool[Math.floor(Math.random() * upgradePool.length)];
-    const weakIdx = [];
-    deck.forEach((id, idx) => {
-      const def = CARD_POOL[id];
-      if (def && def.cost <= 2 && getRarity(id) === "normal") weakIdx.push(idx);
-    });
-    const idx = weakIdx.length
-      ? weakIdx[Math.floor(Math.random() * weakIdx.length)]
-      : Math.floor(Math.random() * deck.length);
-    deck[idx] = newId;
-    if (Math.random() < 0.5) deck[(idx + 1) % deck.length] = newId;
-  }
-
-  // レジェンド：10戦目に1枚、以降5戦ごとに+1
-  let legendCount = 0;
-  if (battleNum >= 10) {
-    legendCount = 1 + Math.floor((battleNum - 10) / 5);
-  }
-  if (legendCount > 0 && legPool.length) {
-    for (let i = 0; i < legendCount; i++) {
-      const inject = legPool[Math.floor(Math.random() * legPool.length)];
-      deck[Math.floor(Math.random() * deck.length)] = inject;
+    for (let n = 0; n < 2; n++) {
+      // 低レア・低コスト優先で差し替え
+      const weakIdx = [];
+      deck.forEach((id, idx) => {
+        if (rarityRank(id) <= 1) weakIdx.push(idx);
+      });
+      const idx = weakIdx.length
+        ? weakIdx[Math.floor(Math.random() * weakIdx.length)]
+        : Math.floor(Math.random() * deck.length);
+      const newId = upgradePool[Math.floor(Math.random() * upgradePool.length)];
+      deck[idx] = newId;
     }
   }
 
