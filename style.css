@@ -1265,3 +1265,637 @@ h3 {
   font-weight: bold;
   min-width: 120px;
 }
+
+
+/* ========== シャドウバース風バトル ========== */
+.sv-battle {
+  padding: 8px !important;
+  max-width: 100%;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 20%, rgba(50, 80, 140, 0.25) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 50% 85%, rgba(80, 40, 100, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, #0a1525 0%, #152238 35%, #1a1a32 65%, #0d1018 100%) !important;
+  min-height: calc(100vh - 24px);
+  min-height: calc(100dvh - 24px);
+}
+
+.sv-layout {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-height: inherit;
+}
+
+.sv-arena {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sv-leader-row {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+}
+
+.sv-leader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(8, 12, 24, 0.85);
+  border-radius: 40px;
+  padding: 6px 16px 6px 6px;
+  border: 2px solid rgba(255,255,255,0.12);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.sv-leader.enemy-status {
+  border-color: rgba(233, 69, 96, 0.55);
+  flex-direction: row-reverse;
+  padding: 6px 6px 6px 16px;
+}
+
+.sv-leader.player-status {
+  border-color: rgba(74, 158, 255, 0.55);
+}
+
+.sv-portrait {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  border: 3px solid #c9a227;
+  background: radial-gradient(circle at 35% 30%, #4a6fa5, #1a2744);
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.enemy-portrait {
+  background: radial-gradient(circle at 35% 30%, #a55a6a, #4a1520);
+  border-color: #e94560;
+}
+
+.player-portrait {
+  background: radial-gradient(circle at 35% 30%, #5a8fd4, #1a3a6a);
+  border-color: #4a9eff;
+}
+
+.sv-leader-info {
+  text-align: left;
+}
+
+.sv-leader.enemy-status .sv-leader-info {
+  text-align: right;
+}
+
+.sv-leader-info .status-label {
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+  color: #c8d6e5;
+}
+
+.sv-hp-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.15rem;
+  font-weight: bold;
+}
+
+.sv-hp-badge strong {
+  color: #ff8a8a;
+  font-size: 1.25rem;
+  min-width: 28px;
+}
+
+.sv-hp-bar {
+  width: 72px;
+  height: 8px;
+  flex: none;
+}
+
+.sv-board-row {
+  display: flex;
+  justify-content: center;
+  min-height: 0;
+}
+
+.sv-board {
+  width: 100%;
+  max-width: 720px;
+  min-height: 115px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.enemy-field .sv-board {
+  background: rgba(120, 30, 40, 0.12);
+  border-color: rgba(233, 100, 100, 0.22);
+}
+
+.player-field .sv-board {
+  background: rgba(30, 60, 120, 0.12);
+  border-color: rgba(100, 160, 255, 0.22);
+}
+
+.sv-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.sv-turn-badge {
+  display: inline-block;
+  padding: 5px 18px;
+  background: linear-gradient(180deg, #3d6aaa, #1e3a5f);
+  border: 2px solid #7eb0ff;
+  border-radius: 20px;
+  box-shadow: 0 0 14px rgba(100, 160, 255, 0.35);
+  color: #d0e6ff;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.sv-field-limit {
+  font-size: 0.75rem;
+  color: #8899aa;
+}
+
+.sv-hand-row {
+  margin-top: auto;
+}
+
+.sv-hand {
+  min-height: 150px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.4));
+  border-radius: 12px;
+  justify-content: center;
+  padding: 8px 6px;
+}
+
+.sv-hand-hint {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #667;
+  margin-top: 2px;
+}
+
+/* サイドバー */
+.sv-sidebar {
+  width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  padding: 8px 4px;
+}
+
+.sv-pp-panel {
+  background: rgba(8, 12, 28, 0.9);
+  border: 2px solid rgba(100, 160, 255, 0.4);
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(50, 100, 200, 0.2);
+}
+
+.sv-pp-label {
+  font-size: 0.75rem;
+  color: #7ec8ff;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.sv-pp-num {
+  font-size: 1.3rem;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sv-pp-panel .mana-pips {
+  justify-content: center;
+  gap: 3px;
+}
+
+.sv-pp-panel .mana-pip {
+  width: 11px;
+  height: 11px;
+}
+
+.sv-end-turn {
+  background: linear-gradient(180deg, #4a90d9, #1e4a8a) !important;
+  border: 2px solid #7eb0ff !important;
+  border-radius: 50% !important;
+  width: 100px;
+  height: 100px;
+  align-self: center;
+  font-size: 0.85rem !important;
+  line-height: 1.2;
+  padding: 8px !important;
+  box-shadow: 0 0 16px rgba(80, 140, 255, 0.4);
+}
+
+.sv-face-btn {
+  font-size: 0.78rem !important;
+  padding: 8px 6px !important;
+}
+
+.sv-side-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.sv-side-tools .btn {
+  font-size: 0.8rem;
+  padding: 8px;
+}
+
+@media (max-width: 800px) {
+  .sv-layout {
+    flex-direction: column;
+  }
+  .sv-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    order: 2;
+  }
+  .sv-arena {
+    order: 1;
+  }
+  .sv-end-turn {
+    width: 72px;
+    height: 72px;
+    font-size: 0.72rem !important;
+  }
+  .sv-pp-panel {
+    flex: 1;
+    min-width: 100px;
+  }
+  .sv-side-tools {
+    flex-direction: row;
+    margin-top: 0;
+  }
+  .sv-portrait {
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+  }
+  .sv-board {
+    min-height: 95px;
+  }
+  .sv-hand {
+    min-height: 130px;
+  }
+  .sv-battle .action-bar {
+    display: none;
+  }
+}
+
+
+/* ========== スマホ最適化（総合） ========== */
+body.is-mobile {
+  overflow-x: hidden;
+}
+
+body.is-mobile .screen {
+  border-radius: 0;
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px);
+}
+
+body.is-mobile .btn {
+  min-height: 48px;
+  min-width: 48px;
+  font-size: 1rem;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+body.is-mobile .button-row {
+  flex-direction: column;
+  width: 100%;
+}
+body.is-mobile .button-row .btn {
+  width: 100%;
+}
+
+/* タイトル・その他 */
+body.is-mobile h1 { font-size: 1.4rem; }
+body.is-mobile .rules-box { font-size: 0.85rem; max-height: 40vh; overflow-y: auto; }
+
+/* デッキ構築 */
+body.is-mobile .deckbuild-layout {
+  grid-template-columns: 1fr !important;
+  gap: 8px;
+}
+body.is-mobile .pool-panel,
+body.is-mobile .deck-panel {
+  max-height: 38vh;
+}
+body.is-mobile .pool-item .count-ctrl button,
+body.is-mobile .deck-item .count-ctrl button {
+  width: 44px;
+  height: 44px;
+  font-size: 1.35rem;
+}
+
+/* ===== バトル画面：縦型固定レイアウト ===== */
+body.is-mobile .sv-battle {
+  padding: 4px !important;
+  padding-bottom: max(4px, env(safe-area-inset-bottom)) !important;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.is-mobile .sv-layout {
+  flex-direction: column !important;
+  flex: 1;
+  gap: 4px;
+  min-height: 0;
+}
+
+body.is-mobile .sv-arena {
+  flex: 1;
+  min-height: 0;
+  gap: 2px;
+  display: flex;
+  flex-direction: column;
+}
+
+body.is-mobile .sv-leader {
+  padding: 4px 10px 4px 4px !important;
+  gap: 8px;
+}
+body.is-mobile .sv-leader.enemy-status {
+  padding: 4px 4px 4px 10px !important;
+}
+body.is-mobile .sv-portrait {
+  width: 36px !important;
+  height: 36px !important;
+  font-size: 1.1rem !important;
+  border-width: 2px;
+}
+body.is-mobile .sv-leader-info .status-label {
+  font-size: 0.7rem !important;
+}
+body.is-mobile .sv-hp-badge {
+  font-size: 0.95rem !important;
+}
+body.is-mobile .sv-hp-badge strong {
+  font-size: 1.05rem !important;
+}
+body.is-mobile .sv-hp-bar {
+  width: 56px !important;
+  height: 6px !important;
+}
+body.is-mobile .streak-row {
+  font-size: 0.65rem !important;
+  margin-top: 0 !important;
+}
+
+body.is-mobile .sv-board {
+  min-height: 88px !important;
+  max-width: 100% !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  border-radius: 10px;
+}
+
+body.is-mobile .sv-center {
+  padding: 1px 0;
+}
+body.is-mobile .sv-turn-badge {
+  font-size: 0.75rem !important;
+  padding: 4px 12px !important;
+}
+body.is-mobile .sv-field-limit {
+  font-size: 0.65rem;
+}
+
+/* カード：スマホは小さめ */
+body.is-mobile .card {
+  width: 78px !important;
+  min-height: 108px !important;
+  border-width: 2px !important;
+  border-radius: 8px !important;
+}
+body.is-mobile .card .cost {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0.8rem !important;
+  top: 2px !important;
+  left: 2px !important;
+}
+body.is-mobile .card .card-art {
+  height: 40px !important;
+  margin: 4px 4px 0 !important;
+  font-size: 1.2rem !important;
+}
+body.is-mobile .card .name {
+  font-size: 0.58rem !important;
+  margin: -4px 2px 0 !important;
+  padding: 2px !important;
+}
+body.is-mobile .card .type-label {
+  font-size: 0.48rem !important;
+}
+body.is-mobile .card .effect {
+  font-size: 0.48rem !important;
+  -webkit-line-clamp: 2 !important;
+  margin: 1px 3px !important;
+}
+body.is-mobile .card .stats .stat-badge {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0.8rem !important;
+}
+body.is-mobile .card .kw-icons {
+  font-size: 0.65rem !important;
+  top: 2px !important;
+  right: 2px !important;
+}
+body.is-mobile .rarity-dot {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+/* 手札：横スクロール固定 */
+body.is-mobile .sv-hand-row {
+  flex-shrink: 0;
+}
+body.is-mobile .sv-hand {
+  min-height: 120px !important;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  gap: 6px;
+  padding: 6px 8px !important;
+  flex-wrap: nowrap !important;
+}
+body.is-mobile .sv-hand .card {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+body.is-mobile .sv-hand-hint {
+  font-size: 0.65rem !important;
+  padding: 2px;
+}
+
+/* サイドバー：下部ツールバー化 */
+body.is-mobile .sv-sidebar {
+  width: 100% !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 4px !important;
+  padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+  background: rgba(8, 12, 24, 0.95);
+  border-top: 1px solid rgba(100, 140, 200, 0.3);
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  order: 99;
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+}
+
+body.is-mobile .sv-pp-panel {
+  flex: 0 0 auto;
+  padding: 6px 8px !important;
+  border-radius: 10px !important;
+  min-width: 72px;
+}
+body.is-mobile .sv-pp-label { font-size: 0.65rem !important; }
+body.is-mobile .sv-pp-num { font-size: 1rem !important; margin-bottom: 2px !important; }
+body.is-mobile .sv-pp-panel .mana-pip {
+  width: 9px !important;
+  height: 9px !important;
+}
+
+body.is-mobile .sv-end-turn {
+  width: 64px !important;
+  height: 64px !important;
+  font-size: 0.68rem !important;
+  flex-shrink: 0;
+  border-radius: 50% !important;
+  padding: 4px !important;
+  line-height: 1.15 !important;
+}
+
+body.is-mobile .sv-face-btn {
+  flex: 1;
+  font-size: 0.72rem !important;
+  padding: 10px 6px !important;
+  min-height: 48px;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+body.is-mobile .sv-side-tools {
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin-top: 0 !important;
+}
+body.is-mobile .sv-side-tools .btn {
+  font-size: 0.7rem !important;
+  padding: 8px 10px !important;
+  min-height: 36px;
+  min-width: 56px;
+}
+
+body.is-mobile #btn-cancel:not(.hidden) {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 140px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* ツールチップは画面中央 */
+body.is-mobile .card.show-tooltip .card-tooltip {
+  display: block !important;
+  position: fixed !important;
+  left: 50% !important;
+  top: 40% !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(300px, 88vw) !important;
+  max-height: 60vh;
+  overflow-y: auto;
+  pointer-events: auto !important;
+  z-index: 300 !important;
+}
+
+body.is-mobile .card:hover {
+  transform: none;
+}
+body.is-mobile .card.tap-armed {
+  transform: translateY(-6px) scale(1.05);
+  z-index: 10;
+}
+
+/* モーダル */
+body.is-mobile .modal {
+  align-items: flex-end;
+  padding: 0;
+}
+body.is-mobile .modal-content {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px 16px 0 0;
+  max-height: 80dvh;
+}
+
+/* 横向き */
+@media (max-width: 950px) and (orientation: landscape) {
+  body.is-mobile .sv-layout {
+    flex-direction: row !important;
+  }
+  body.is-mobile .sv-sidebar {
+    width: 100px !important;
+    flex-direction: column !important;
+    position: relative;
+    border-top: none;
+    border-left: 1px solid rgba(100,140,200,0.3);
+    order: 0;
+  }
+  body.is-mobile .sv-end-turn {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  body.is-mobile .sv-board {
+    min-height: 70px !important;
+  }
+  body.is-mobile .sv-hand {
+    min-height: 100px !important;
+  }
+  body.is-mobile .card {
+    width: 64px !important;
+    min-height: 90px !important;
+  }
+}

@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="theme-color" content="#0a1525">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ローグライク・カードゲーム</title>
   <link rel="stylesheet" href="style.css">
@@ -62,62 +65,80 @@
       </div>
     </div>
 
-    <!-- 戦闘画面 -->
-    <div id="battle-screen" class="screen hidden">
-      <div class="top-bar">
-        <div class="status-block player-status">
-          <div class="status-label">あなた</div>
-          <div class="hp-row">
-            <span class="hp-icon">❤</span>
-            <div class="hp-bar-wrap">
-              <div class="hp-bar" id="player-hp-bar"></div>
+    <!-- 戦闘画面（シャドウバース風） -->
+    <div id="battle-screen" class="screen hidden sv-battle">
+      <div class="sv-layout">
+        <!-- メインアリーナ -->
+        <div class="sv-arena">
+          <!-- 敵リーダー -->
+          <div class="sv-leader-row enemy">
+            <div class="sv-leader enemy-status">
+              <div class="sv-portrait enemy-portrait">👤</div>
+              <div class="sv-leader-info">
+                <div class="status-label" id="enemy-name">敵</div>
+                <div class="sv-hp-badge">
+                  <span class="hp-icon">❤</span>
+                  <strong id="enemy-hp">20</strong>
+                  <div class="hp-bar-wrap sv-hp-bar"><div class="hp-bar enemy" id="enemy-hp-bar"></div></div>
+                </div>
+              </div>
             </div>
-            <span class="hp-num"><strong id="player-hp">20</strong>/20</span>
           </div>
-          <div class="mana-row">
-            <span class="mana-label">マナ</span>
+
+          <!-- 敵の場 -->
+          <div class="sv-board-row enemy-field">
+            <div id="enemy-field" class="field sv-board"></div>
+          </div>
+
+          <!-- 中央 -->
+          <div class="sv-center">
+            <div id="turn-indicator" class="sv-turn-badge">あなたのターン</div>
+            <div class="sv-field-limit">場 <span id="field-count">0</span>/5</div>
+          </div>
+
+          <!-- 自分の場 -->
+          <div class="sv-board-row player-field">
+            <div id="player-field" class="field sv-board"></div>
+          </div>
+
+          <!-- 自分リーダー -->
+          <div class="sv-leader-row player">
+            <div class="sv-leader player-status">
+              <div class="sv-portrait player-portrait">🛡️</div>
+              <div class="sv-leader-info">
+                <div class="status-label">あなた</div>
+                <div class="sv-hp-badge">
+                  <span class="hp-icon">❤</span>
+                  <strong id="player-hp">20</strong>
+                  <div class="hp-bar-wrap sv-hp-bar"><div class="hp-bar" id="player-hp-bar"></div></div>
+                </div>
+                <div class="streak-row">連勝 <strong id="win-streak">0</strong>　SCR <strong id="run-score">0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 手札 -->
+          <div class="sv-hand-row hand-section">
+            <div id="player-hand" class="hand-area sv-hand"></div>
+            <div class="sv-hand-hint hint">PC:ダブルクリック / スマホ:2回タップでプレイ</div>
+          </div>
+        </div>
+
+        <!-- 右サイドバー -->
+        <div class="sv-sidebar">
+          <div class="sv-pp-panel">
+            <div class="sv-pp-label">マナ</div>
+            <div class="mana-num sv-pp-num"><strong id="player-mana">0</strong>/<span id="player-max-mana">1</span></div>
             <div class="mana-pips" id="player-mana-pips"></div>
-            <span class="mana-num"><strong id="player-mana">0</strong>/<span id="player-max-mana">1</span></span>
           </div>
-          <div class="streak-row">連勝 <strong id="win-streak">0</strong>　スコア <strong id="run-score">0</strong></div>
-        </div>
-        <div class="status-block enemy-status">
-          <div class="status-label" id="enemy-name">敵</div>
-          <div class="hp-row">
-            <span class="hp-icon">❤</span>
-            <div class="hp-bar-wrap">
-              <div class="hp-bar enemy" id="enemy-hp-bar"></div>
-            </div>
-            <span class="hp-num"><strong id="enemy-hp">20</strong>/20</span>
+          <button id="btn-end-turn" class="btn primary sv-end-turn">ターン終了</button>
+          <button id="btn-attack-player" class="btn sv-face-btn" disabled>リーダーに攻撃</button>
+          <button id="btn-cancel" class="btn warning hidden">キャンセル</button>
+          <div class="sv-side-tools">
+            <button id="btn-show-log" class="btn">ログ</button>
+            <button id="btn-retire" class="btn danger">リタイア</button>
           </div>
         </div>
-      </div>
-
-      <div class="field-section enemy-field">
-        <h3>敵の場</h3>
-        <div id="enemy-field" class="field"></div>
-      </div>
-
-      <div class="center-info">
-        <div id="turn-indicator">あなたのターン</div>
-      </div>
-
-      <div class="field-section player-field">
-        <h3>自分の場 (<span id="field-count">0</span>/5)</h3>
-        <div id="player-field" class="field"></div>
-      </div>
-
-      <div class="hand-section">
-        <h3>手札 <span class="hint">（PC:ダブルクリック / スマホ:2回タップでプレイ）</span></h3>
-        <div id="player-hand" class="hand-area"></div>
-      </div>
-
-      <div class="action-bar">
-        <button id="btn-retire" class="btn danger">リタイア</button>
-        <button id="btn-show-log" class="btn">ログ</button>
-        <button id="btn-cancel" class="btn warning hidden">キャンセル</button>
-        <button id="btn-end-turn" class="btn primary">ターン終了</button>
-        <button id="btn-attack-player" class="btn" disabled>プレイヤーに攻撃</button>
       </div>
     </div>
 

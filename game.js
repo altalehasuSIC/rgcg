@@ -49,6 +49,11 @@ class Game {
            navigator.maxTouchPoints > 0;
   }
 
+  clearHandTap() {
+    this._handTapUid = null;
+    document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
+  }
+
   log(msg) {
     const el = document.getElementById("log");
     if (!el) return;
@@ -1330,6 +1335,17 @@ class Game {
 
 window.addEventListener("DOMContentLoaded", () => {
   window.game = new Game();
+  if (window.game.isTouchDevice()) {
+    document.body.classList.add("is-mobile");
+  }
+  // 画面向き・リサイズでモバイル判定を更新
+  const updateMobile = () => {
+    if (window.innerWidth <= 900 || window.game.isTouchDevice()) {
+      document.body.classList.add("is-mobile");
+    }
+  };
+  window.addEventListener("resize", updateMobile);
+  updateMobile();
   document.addEventListener("touchstart", (e) => {
     if (!e.target.closest(".card.show-tooltip") && !e.target.closest(".card-tooltip")) {
       document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
