@@ -401,6 +401,21 @@ h3 {
   box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
+.card .kw-icons {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  z-index: 2;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.card .kw-icon {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+
 .card .name {
   font-size: 0.78rem;
   font-weight: bold;
@@ -770,4 +785,43 @@ h3 {
   .status-block {
     min-width: 100%;
   }
+}
+
+/* レアリティ表示 */
+.rarity-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 2px;
+}
+.rarity-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  box-shadow: 0 0 4px rgba(0,0,0,0.4);
+}
+.rarity-normal {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+.rarity-epic {
+  background: linear-gradient(145deg, #cd7f32, #a0522d);
+  border-color: #e6a86a;
+  box-shadow: 0 0 6px rgba(205, 127, 50, 0.6);
+}
+.rarity-ultimate {
+  background: linear-gradient(145deg, #e8e8e8, #a8a8a8);
+  border-color: #ffffff;
+  box-shadow: 0 0 6px rgba(200, 200, 220, 0.7);
+}
+.rarity-legend {
+  background: linear-gradient(145deg, #ffd700, #ffb300);
+  border-color: #ffe566;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+.score-line {
+  text-align: center;
+  margin: 8px 0 12px;
+  font-size: 1.1rem;
+  color: #ffd700;
 }

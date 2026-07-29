@@ -79,7 +79,7 @@
             <div class="mana-pips" id="player-mana-pips"></div>
             <span class="mana-num"><strong id="player-mana">0</strong>/<span id="player-max-mana">1</span></span>
           </div>
-          <div class="streak-row">連勝 <strong id="win-streak">0</strong></div>
+          <div class="streak-row">連勝 <strong id="win-streak">0</strong>　スコア <strong id="run-score">0</strong></div>
         </div>
         <div class="status-block enemy-status">
           <div class="status-label" id="enemy-name">敵</div>
@@ -135,7 +135,8 @@
     <!-- 勝利報酬画面 -->
     <div id="reward-screen" class="screen hidden">
       <h2>勝利！ 報酬カードを獲得</h2>
-      <p>所持カードに5枚追加されました。デッキは30枚に調整してください。</p>
+      <p>未所持カード最大4種×2枚が所持に追加されます。デッキは30枚に調整してください。</p>
+      <p class="score-line">獲得スコア: <strong id="reward-score">0</strong></p>
       <div id="reward-cards" class="hand-area"></div>
       <div class="button-row">
         <button id="btn-reward-to-title" class="btn">タイトルへ（進捗を保持）</button>
@@ -147,6 +148,7 @@
     <div id="gameover-screen" class="screen hidden">
       <h2>敗北...</h2>
       <p>連勝記録: <strong id="final-streak">0</strong></p>
+      <p>クリアスコア: <strong id="final-score">0</strong></p>
       <button id="btn-retry" class="btn primary">タイトルへ</button>
     </div>
   </div>

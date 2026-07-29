@@ -5,6 +5,7 @@
 class Game {
   constructor() {
     this.winStreak = 0;
+    this.runScore = 0;
     this.runDeck = [];
     this.collection = [];
     this.hasActiveRun = false;
@@ -92,8 +93,10 @@ class Game {
   resetToTitle() {
     this.hasActiveRun = false;
     this.winStreak = 0;
+    this.runScore = 0;
     this.runDeck = [];
     this.collection = [];
+    if (typeof resetEnemyDeckCache === "function") resetEnemyDeckCache();
     this.showScreen("title-screen");
     this.updateTitleContinue();
   }
@@ -299,7 +302,9 @@ class Game {
     if (this.deckEditMode === "start") {
       this.collection = [...this.runDeck];
       this.winStreak = 0;
+      this.runScore = 0;
       this.hasActiveRun = true;
+      if (typeof resetEnemyDeckCache === "function") resetEnemyDeckCache();
     }
     this.startNextBattle();
   }
@@ -377,7 +382,10 @@ class Game {
 
     p.maxMana = Math.min(8, p.maxMana + 1);
     p.mana = p.maxMana;
-    p.field.forEach(c => { c.exhausted = false; });
+    p.field.forEach(c => {
+      c.exhausted = false;
+      c._summonTurnFaceBlock = false; // ターン経過で突撃のプレイヤー攻撃制限解除
+    });
     this.drawCards(who, 1);
 
     if (who === "player") {
@@ -602,8 +610,9 @@ class Game {
       if (def && def.effect) def.effect(this, "player");
       p.grave.push(card);
     } else {
-      // rush なら出したターンでも攻撃可
-      card.exhausted = card.rush ? false : true;
+      // 速攻・突撃なら出したターンでも攻撃可
+      card.exhausted = (card.rush || card.charge) ? false : true;
+      if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
       p.field.push(card);
       this.log(`${card.name}を場に出した。`);
       const def = CARD_POOL[card.cardId];
@@ -638,7 +647,7 @@ class Game {
       this.player.grave.push(card);
     } else {
       // unit onPlay with target (enemy or ally)
-      card.exhausted = card.rush ? false : true;
+      card.exhausted = (card.rush || card.charge) ? false : true;
       this.player.field.push(card);
       this.log(`${card.name}を場に出した。`);
       const def = CARD_POOL[card.cardId];
@@ -667,9 +676,17 @@ class Game {
       this.log("起動に必要なマナが足りません。");
       return;
     }
-    // 召集系のみ場の空きが必要
     if (card.cardId === "徴兵施設" && this.player.field.length >= 5) {
       this.log("場がいっぱいのため起動できません。");
+      return;
+    }
+
+    // 要塞砲台など：ユニット or プレイヤー対象
+    if (def.needsTargetOrPlayer) {
+      this.pendingTarget = { type: "fieldTargetOrPlayer", fieldUid: cardUid, cost };
+      this.log("ダメージ対象（敵ユニット or 「プレイヤーに攻撃」ボタン）を選んでください。");
+      this.updateCancelButton();
+      this.updateUI();
       return;
     }
 
@@ -679,6 +696,34 @@ class Game {
     this.checkDeaths();
     this.updateUI();
     this.checkWinLose();
+  }
+
+  resolveFieldTarget(targetUid) {
+    if (!this.pendingTarget || this.pendingTarget.type !== "fieldTargetOrPlayer") return;
+    const { fieldUid, cost } = this.pendingTarget;
+    const card = this.player.field.find(c => c.uid === fieldUid);
+    if (!card) {
+      this.pendingTarget = null;
+      this.updateCancelButton();
+      return;
+    }
+    const def = CARD_POOL[card.cardId];
+    this.player.mana -= cost;
+    this.log(`${card.name}を起動した。`);
+    if (def && def.effect) def.effect(this, "player", targetUid);
+    this.pendingTarget = null;
+    this.updateCancelButton();
+    this.checkDeaths();
+    this.updateUI();
+    this.checkWinLose();
+  }
+
+  enemyHasGuard() {
+    return this.enemy.field.some(c => c.type === "unit" && c.guard);
+  }
+
+  playerHasGuard() {
+    return this.player.field.some(c => c.type === "unit" && c.guard);
   }
 
   // ========== 攻撃 ==========
@@ -718,9 +763,25 @@ class Game {
   }
 
   attackEnemyPlayer() {
+    // 要塞砲台のプレイヤー対象
+    if (this.pendingTarget && this.pendingTarget.type === "fieldTargetOrPlayer") {
+      this.resolveFieldTarget("player");
+      return;
+    }
     if (!this.selectedUnitUid) return;
     const attacker = this.player.field.find(c => c.uid === this.selectedUnitUid);
     if (!attacker || attacker.exhausted) return;
+
+    // 護衛：敵に護衛ユニットがいるとプレイヤー攻撃不可
+    if (this.enemyHasGuard()) {
+      this.log("敵の護衛ユニットがいるため、プレイヤーに攻撃できない。");
+      return;
+    }
+    // 突撃のみ（速攻なし）は出たターンにプレイヤー攻撃不可
+    if (attacker.charge && !attacker.rush && attacker._summonTurnFaceBlock) {
+      this.log("突撃ユニットは出たターンにプレイヤーへ攻撃できない。");
+      return;
+    }
 
     this.log(`${attacker.name}が敵プレイヤーに${attacker.atk}ダメージ！`);
     this.enemy.hp -= attacker.atk;
@@ -755,6 +816,15 @@ class Game {
       const dead = p.field.filter(c => c.type === "unit" && c.hp <= 0);
       dead.forEach(c => {
         this.log(`${c.name}は破壊された。`);
+        // 倒された時効果
+        if (c.onDeath) {
+          try { c.onDeath(this, who); } catch (e) { console.error(e); }
+        } else {
+          const def = CARD_POOL[c.cardId];
+          if (def && def.onDeath) {
+            try { def.onDeath(this, who); } catch (e) { console.error(e); }
+          }
+        }
         p.grave.push(c);
       });
       p.field = p.field.filter(c => !(c.type === "unit" && c.hp <= 0));
@@ -776,24 +846,40 @@ class Game {
 
   winBattle() {
     this.winStreak++;
-    this.log(`敵を倒した！ 連勝: ${this.winStreak}`);
-    const rewards = getRewardCards(5);
+    const enemyPower = getEnemyPower(this.winStreak - 1);
+    const gained = calcClearScore(this.winStreak, enemyPower);
+    this.runScore += gained;
+    this.log(`敵を倒した！ 連勝: ${this.winStreak} / スコア+${gained}`);
+    const rewards = getRewardCards(this.collection);
     this.collection.push(...rewards);
-    // runDeck は30枚のまま。次はデッキ編集で30枚を選び直す
     this.hasActiveRun = true;
 
     this.showScreen("reward-screen");
     const area = document.getElementById("reward-cards");
     area.innerHTML = "";
-    rewards.forEach(id => {
+    // 種類ごとにまとめて表示
+    const seen = {};
+    rewards.forEach(id => { seen[id] = (seen[id] || 0) + 1; });
+    Object.entries(seen).forEach(([id, cnt]) => {
       const inst = createCardInstance(id, "player");
-      area.appendChild(this.createCardElement(inst, false));
+      const el = this.createCardElement(inst, false);
+      const badge = document.createElement("div");
+      badge.style.cssText = "text-align:center;font-weight:bold;color:#ffd700;margin-top:4px;";
+      badge.textContent = `×${cnt}`;
+      const wrap = document.createElement("div");
+      wrap.appendChild(el);
+      wrap.appendChild(badge);
+      area.appendChild(wrap);
     });
+    const scoreEl = document.getElementById("reward-score");
+    if (scoreEl) scoreEl.textContent = `${gained}（累計 ${this.runScore}）`;
   }
 
   loseBattle() {
     this.hasActiveRun = false;
     document.getElementById("final-streak").textContent = this.winStreak;
+    const fs = document.getElementById("final-score");
+    if (fs) fs.textContent = this.runScore;
     this.showScreen("gameover-screen");
   }
 
@@ -839,7 +925,8 @@ class Game {
         }
         e.grave.push(card);
       } else {
-        card.exhausted = card.rush ? false : true;
+        card.exhausted = (card.rush || card.charge) ? false : true;
+        if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
         e.field.push(card);
         this.log(`敵は${card.name}を場に出した。`);
         if (def && def.onPlay) {
@@ -877,7 +964,11 @@ class Game {
 
     const attackers = e.field.filter(c => c.type === "unit" && !c.exhausted);
     for (const atk of attackers) {
-      const targets = this.player.field.filter(c => c.type === "unit");
+      let targets = this.player.field.filter(c => c.type === "unit");
+      // 護衛がいれば護衛を優先（プレイヤー攻撃不可）
+      const guards = targets.filter(c => c.guard);
+      if (guards.length > 0) targets = guards;
+
       if (targets.length > 0) {
         targets.sort((a, b) => a.hp - b.hp);
         const t = targets[0];
@@ -885,9 +976,16 @@ class Game {
         t.hp -= atk.atk;
         atk.hp -= t.atk;
         atk.exhausted = true;
-      } else {
+      } else if (!this.playerHasGuard()) {
+        // 突撃のみは出たターンにプレイヤー攻撃しない
+        if (atk.charge && !atk.rush && atk._summonTurnFaceBlock) {
+          atk.exhausted = true;
+          continue;
+        }
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;
+        atk.exhausted = true;
+      } else {
         atk.exhausted = true;
       }
       this.checkDeaths();
@@ -911,6 +1009,8 @@ class Game {
     document.getElementById("player-mana").textContent = this.player.mana;
     document.getElementById("player-max-mana").textContent = this.player.maxMana;
     document.getElementById("win-streak").textContent = this.winStreak;
+    const scoreHud = document.getElementById("run-score");
+    if (scoreHud) scoreHud.textContent = this.runScore;
     document.getElementById("enemy-name").textContent = this.enemyName;
     document.getElementById("field-count").textContent = this.player.field.length;
 
@@ -994,13 +1094,20 @@ class Game {
         } else if ((this.pendingTarget.type === "playOnPlay" || this.pendingTarget.type === "spellTarget") && c.type === "unit") {
           el.classList.add("targetable");
           el.onclick = () => this.resolvePlayWithTarget(c.uid);
+        } else if (this.pendingTarget.type === "fieldTargetOrPlayer" && c.type === "unit") {
+          el.classList.add("targetable");
+          el.onclick = () => this.resolveFieldTarget(c.uid);
         }
       }
       ef.appendChild(el);
     });
 
     const atkBtn = document.getElementById("btn-attack-player");
-    atkBtn.disabled = !(this.selectedUnitUid && this.currentPlayer === "player" && this.pendingTarget?.type === "attack");
+    const canFace = this.selectedUnitUid && this.currentPlayer === "player" && this.pendingTarget?.type === "attack";
+    const canFieldFace = this.pendingTarget?.type === "fieldTargetOrPlayer";
+    atkBtn.disabled = !(canFace || canFieldFace);
+    if (canFieldFace) atkBtn.textContent = "プレイヤーにダメージ";
+    else atkBtn.textContent = "プレイヤーに攻撃";
   }
 
   createCardElement(card, interactive) {
@@ -1010,8 +1117,16 @@ class Game {
 
     const typeLabel = card.type === "unit" ? "ユニット" : card.type === "spell" ? "呪文" : "フィールド";
 
+    // キーワードアイコン
+    const icons = [];
+    if (card.guard) icons.push('<span class="kw-icon" title="護衛">🛡️</span>');
+    if (card.charge) icons.push('<span class="kw-icon" title="突撃">✊</span>');
+    if (card.rush) icons.push('<span class="kw-icon" title="速攻">💨</span>');
+    const iconHtml = icons.length ? `<div class="kw-icons">${icons.join("")}</div>` : "";
+
     let statsHtml = "";
     let tooltipStats = "";
+    let kwLine = "";
     if (card.type === "unit") {
       const maxHp = card.maxHp || card.hp;
       let hpClass = "hp stat-badge";
@@ -1025,21 +1140,32 @@ class Game {
           <span class="${hpClass}">❤ ${hpText}</span>
         </div>`;
       tooltipStats = `<div class="tt-stats">攻撃力 <strong style="color:#ff8a8a">${card.atk}</strong>　/　体力 <strong style="color:#8aff8a">${card.hp}</strong>${card.hp < maxHp ? " / " + maxHp : ""}</div>`;
+      const kws = [];
+      if (card.guard) kws.push("🛡️護衛");
+      if (card.charge) kws.push("✊突撃");
+      if (card.rush) kws.push("💨速攻");
+      if (kws.length) kwLine = `<div class="tt-meta">${kws.join("　")}</div>`;
     }
 
     const effectLine = card.effectText
       ? `<div class="tt-effect">${card.effectText}</div>`
       : "";
 
+    const rarity = card.rarity || "normal";
+    const rarityLabel = (typeof RARITY_LABEL !== "undefined" && RARITY_LABEL[rarity]) ? RARITY_LABEL[rarity] : rarity;
+
     el.innerHTML = `
       <div class="cost">${card.cost}</div>
+      ${iconHtml}
       <div class="name">${card.name}</div>
       <div class="type-label">${typeLabel}</div>
       <div class="effect">${card.effectText || ""}</div>
       ${statsHtml}
+      <div class="rarity-row"><span class="rarity-dot rarity-${rarity}" title="${rarityLabel}"></span></div>
       <div class="card-tooltip">
         <div class="tt-name">${card.name}</div>
-        <div class="tt-meta">コスト ${card.cost}　／　${typeLabel}</div>
+        <div class="tt-meta">コスト ${card.cost}　／　${typeLabel}　／　${rarityLabel}</div>
+        ${kwLine}
         ${tooltipStats}
         ${effectLine}
       </div>

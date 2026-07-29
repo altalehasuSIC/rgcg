@@ -32,7 +32,9 @@ const CARD_POOL = {
     id: "騎兵", name: "騎兵", cost: 2, type: "unit", atk: 3, hp: 1, effectText: ""
   },
   "尖兵": {
-    id: "尖兵", name: "尖兵", cost: 2, type: "unit", atk: 1, hp: 3, effectText: ""
+    id: "尖兵", name: "尖兵", cost: 2, type: "unit", atk: 1, hp: 3,
+    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    guard: true
   },
 
   // === 3コスト ===
@@ -116,7 +118,7 @@ const CARD_POOL = {
     id: "盾兵", name: "盾兵", cost: 2, type: "unit", atk: 1, hp: 4, effectText: ""
   },
   "疾風騎兵": {
-    id: "疾風騎兵", name: "疾風騎兵", cost: 2, type: "unit", atk: 2, hp: 2,
+    id: "疾風騎兵", name: "疾風騎兵", cost: 3, type: "unit", atk: 2, hp: 2,
     effectText: "速攻（出したターンでも攻撃できる）。",
     rush: true
   },
@@ -136,7 +138,9 @@ const CARD_POOL = {
 
   // 3コスト
   "槍兵": {
-    id: "槍兵", name: "槍兵", cost: 3, type: "unit", atk: 3, hp: 2, effectText: ""
+    id: "槍兵", name: "槍兵", cost: 3, type: "unit", atk: 3, hp: 2,
+    effectText: "突撃（出たターンにユニットへ攻撃できる）。",
+    charge: true
   },
   "重装兵": {
     id: "重装兵", name: "重装兵", cost: 3, type: "unit", atk: 2, hp: 5, effectText: ""
@@ -152,14 +156,16 @@ const CARD_POOL = {
     onPlay: (game, owner) => game.buffAllUnits(owner, 1, 0)
   },
   "斬り込み隊": {
-    id: "斬り込み隊", name: "斬り込み隊", cost: 3, type: "unit", atk: 4, hp: 1,
-    effectText: "速攻。",
+    id: "斬り込み隊", name: "斬り込み隊", cost: 4, type: "unit", atk: 4, hp: 1,
+    effectText: "速攻（出したターンでも攻撃できる）。",
     rush: true
   },
 
   // 4コスト
   "鉄壁の守備兵": {
-    id: "鉄壁の守備兵", name: "鉄壁の守備兵", cost: 4, type: "unit", atk: 2, hp: 6, effectText: ""
+    id: "鉄壁の守備兵", name: "鉄壁の守備兵", cost: 4, type: "unit", atk: 2, hp: 6,
+    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    guard: true
   },
   "突撃兵": {
     id: "突撃兵", name: "突撃兵", cost: 4, type: "unit", atk: 4, hp: 3,
@@ -171,14 +177,15 @@ const CARD_POOL = {
   },
   "戦医": {
     id: "戦医", name: "戦医", cost: 4, type: "unit", atk: 1, hp: 3,
-    effectText: "場に出た時：味方ユニット1体の体力を3回復。",
+    effectText: "場に出た時：味方ユニット1体の体力を3回復。プレイヤーの体力を2回復。",
     needsTargetAlly: true,
     onPlay: (game, owner, targetUid) => {
       if (targetUid != null) game.healUnit(targetUid, 3);
+      game.healPlayer(owner, 2);
     }
   },
   "破壊工作員": {
-    id: "破壊工作員", name: "破壊工作員", cost: 4, type: "unit", atk: 3, hp: 2,
+    id: "破壊工作員", name: "破壊工作員", cost: 4, type: "unit", atk: 3, hp: 3,
     effectText: "場に出た時：相手のユニット1体を破壊する。",
     needsTarget: true,
     onPlay: (game, owner, targetUid) => {
@@ -188,7 +195,9 @@ const CARD_POOL = {
 
   // 5コスト
   "精鋭槍兵": {
-    id: "精鋭槍兵", name: "精鋭槍兵", cost: 5, type: "unit", atk: 4, hp: 4, effectText: ""
+    id: "精鋭槍兵", name: "精鋭槍兵", cost: 5, type: "unit", atk: 5, hp: 4,
+    effectText: "突撃（出たターンにユニットへ攻撃できる）。",
+    charge: true
   },
   "猛将の護衛": {
     id: "猛将の護衛", name: "猛将の護衛", cost: 5, type: "unit", atk: 3, hp: 5,
@@ -206,7 +215,9 @@ const CARD_POOL = {
 
   // 6〜7コスト
   "大盾兵": {
-    id: "大盾兵", name: "大盾兵", cost: 6, type: "unit", atk: 3, hp: 8, effectText: ""
+    id: "大盾兵", name: "大盾兵", cost: 6, type: "unit", atk: 3, hp: 8,
+    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    guard: true
   },
   "破壊の巨人兵": {
     id: "破壊の巨人兵", name: "破壊の巨人兵", cost: 7, type: "unit", atk: 6, hp: 6,
@@ -275,8 +286,11 @@ const CARD_POOL = {
   },
   "大回復": {
     id: "大回復", name: "大回復", cost: 4, type: "spell",
-    effectText: "自分の体力を8回復する。",
-    effect: (game, owner) => game.healPlayer(owner, 8)
+    effectText: "自分の体力を5回復する。カードを1枚引く。",
+    effect: (game, owner) => {
+      game.healPlayer(owner, 5);
+      game.drawCards(owner, 1);
+    }
   },
   "処刑": {
     id: "処刑", name: "処刑", cost: 5, type: "spell",
@@ -317,16 +331,196 @@ const CARD_POOL = {
   },
   "要塞砲台": {
     id: "要塞砲台", name: "要塞砲台", cost: 5, type: "field",
-    effectText: "起動：コスト3を支払い、相手プレイヤーに3ダメージ。",
-    activateCost: 3,
+    effectText: "起動：コスト1を支払い、相手のユニット1体またはプレイヤーに2ダメージ。",
+    activateCost: 1,
+    needsTargetOrPlayer: true,
+    effect: (game, owner, targetUid) => {
+      if (targetUid === "player") {
+        const enemy = owner === "player" ? "enemy" : "player";
+        game.damagePlayer(enemy, 2);
+      } else if (targetUid != null) {
+        game.damageUnit(targetUid, 2);
+      }
+    }
+  },
+  "偵察兵": {
+    id: "偵察兵", name: "偵察兵", cost: 2, type: "unit", atk: 2, hp: 2,
+    effectText: "場に出た時：カードを1枚引く。",
+    onPlay: (game, owner) => game.drawCards(owner, 1)
+  },
+  "旗手": {
+    id: "旗手", name: "旗手", cost: 3, type: "unit", atk: 2, hp: 3,
+    effectText: "場に出た時：味方ユニット全ての体力+1。",
+    onPlay: (game, owner) => game.buffAllUnits(owner, 0, 1)
+  },
+  "暗殺者": {
+    id: "暗殺者", name: "暗殺者", cost: 3, type: "unit", atk: 3, hp: 1,
+    effectText: "速攻。場に出た時：相手のユニット1体に2ダメージ。",
+    rush: true, needsTarget: true,
+    onPlay: (game, owner, targetUid) => { if (targetUid != null) game.damageUnit(targetUid, 2); }
+  },
+  "補給兵": {
+    id: "補給兵", name: "補給兵", cost: 2, type: "unit", atk: 1, hp: 3,
+    effectText: "場に出た時：自分の体力を3回復。",
+    onPlay: (game, owner) => game.healPlayer(owner, 3)
+  },
+  "連射弓兵": {
+    id: "連射弓兵", name: "連射弓兵", cost: 4, type: "unit", atk: 2, hp: 3,
+    effectText: "場に出た時：相手のユニット全てに1ダメージ。",
+    onPlay: (game, owner) => {
+      game.damageAllUnits(owner === "player" ? "enemy" : "player", 1);
+    }
+  },
+  "決死隊": {
+    id: "決死隊", name: "決死隊", cost: 3, type: "spell",
+    effectText: "味方ユニット全ての攻撃力+2。",
+    effect: (game, owner) => game.buffAllUnits(owner, 2, 0)
+  },
+  "毒矢": {
+    id: "毒矢", name: "毒矢", cost: 2, type: "spell",
+    effectText: "相手のユニット1体に3ダメージ。",
+    needsTarget: true,
+    effect: (game, owner, targetUid) => { if (targetUid != null) game.damageUnit(targetUid, 3); }
+  },
+  "緊急徴兵": {
+    id: "緊急徴兵", name: "緊急徴兵", cost: 3, type: "spell",
+    effectText: "下級兵士を1枚と召集兵を1枚場に出す。",
+    effect: (game, owner) => {
+      game.summonToken(owner, "下級兵士");
+      game.summonToken(owner, "召集兵");
+    }
+  },
+  "監視塔": {
+    id: "監視塔", name: "監視塔", cost: 2, type: "field",
+    effectText: "起動：コスト1を支払い、カードを1枚引く。",
+    activateCost: 1,
+    effect: (game, owner) => game.drawCards(owner, 1)
+  },
+  "兵舎": {
+    id: "兵舎", name: "兵舎", cost: 4, type: "field",
+    effectText: "起動：コスト2を支払い、下級兵士を1枚場に出す。",
+    activateCost: 2,
+    effect: (game, owner) => game.summonToken(owner, "下級兵士")
+  },
+  "王直属近衛": {
+    id: "王直属近衛", name: "王直属近衛", cost: 5, type: "unit", atk: 4, hp: 5,
+    effectText: "護衛。場に出た時：味方ユニット全ての攻撃力+1。",
+    guard: true,
+    onPlay: (game, owner) => game.buffAllUnits(owner, 1, 0)
+  },
+  "黒騎兵団": {
+    id: "黒騎兵団", name: "黒騎兵団", cost: 5, type: "unit", atk: 5, hp: 3,
+    effectText: "速攻。場に出た時：相手プレイヤーに2ダメージ。",
+    rush: true,
+    onPlay: (game, owner) => game.damagePlayer(owner === "player" ? "enemy" : "player", 2)
+  },
+  "戦術爆撃": {
+    id: "戦術爆撃", name: "戦術爆撃", cost: 5, type: "spell",
+    effectText: "相手のユニット全てに4ダメージ。相手プレイヤーに2ダメージ。",
     effect: (game, owner) => {
       const enemy = owner === "player" ? "enemy" : "player";
+      game.damageAllUnits(enemy, 4);
+      game.damagePlayer(enemy, 2);
+    }
+  },
+  "再生の儀式": {
+    id: "再生の儀式", name: "再生の儀式", cost: 4, type: "spell",
+    effectText: "自分の体力を6回復し、カードを2枚引く。",
+    effect: (game, owner) => {
+      game.healPlayer(owner, 6);
+      game.drawCards(owner, 2);
+    }
+  },
+  "魔法砲台": {
+    id: "魔法砲台", name: "魔法砲台", cost: 4, type: "field",
+    effectText: "起動：コスト2を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
+    activateCost: 2,
+    needsTargetOrPlayer: true,
+    effect: (game, owner, targetUid) => {
+      if (targetUid === "player") game.damagePlayer(owner === "player" ? "enemy" : "player", 3);
+      else if (targetUid != null) game.damageUnit(targetUid, 3);
+    }
+  },
+  "伝説の英雄": {
+    id: "伝説の英雄", name: "伝説の英雄", cost: 8, type: "unit", atk: 7, hp: 7,
+    effectText: "速攻。場に出た時：相手のユニット全てに3ダメージ、相手プレイヤーに3ダメージ。",
+    rush: true,
+    onPlay: (game, owner) => {
+      const enemy = owner === "player" ? "enemy" : "player";
+      game.damageAllUnits(enemy, 3);
       game.damagePlayer(enemy, 3);
+    }
+  },
+  "不滅の守護神": {
+    id: "不滅の守護神", name: "不滅の守護神", cost: 7, type: "unit", atk: 4, hp: 12,
+    effectText: "護衛。場に出た時：自分の体力を5回復、味方ユニット全ての体力+3。",
+    guard: true,
+    onPlay: (game, owner) => {
+      game.healPlayer(owner, 5);
+      game.buffAllUnits(owner, 0, 3);
+    }
+  },
+  "終末の宣告": {
+    id: "終末の宣告", name: "終末の宣告", cost: 7, type: "spell",
+    effectText: "相手のユニット全てを破壊する。相手プレイヤーに5ダメージ。",
+    effect: (game, owner) => {
+      const enemy = owner === "player" ? "enemy" : "player";
+      const p = enemy === "player" ? game.player : game.enemy;
+      p.field.filter(c => c.type === "unit").forEach(c => { c.hp = 0; });
+      game.checkDeaths();
+      game.damagePlayer(enemy, 5);
+    }
+  },
+  "無限の兵站": {
+    id: "無限の兵站", name: "無限の兵站", cost: 6, type: "spell",
+    effectText: "カードを3枚引き、中級兵士を2枚場に出す。",
+    effect: (game, owner) => {
+      game.drawCards(owner, 3);
+      game.summonToken(owner, "中級兵士");
+      game.summonToken(owner, "中級兵士");
+    }
+  },
+  "世界樹の砦": {
+    id: "世界樹の砦", name: "世界樹の砦", cost: 6, type: "field",
+    effectText: "起動：コスト2を支払い、自分の体力を4回復し、カードを1枚引き、味方全体の攻撃力+1。",
+    activateCost: 2,
+    effect: (game, owner) => {
+      game.healPlayer(owner, 4);
+      game.drawCards(owner, 1);
+      game.buffAllUnits(owner, 1, 0);
+    }
+  },
+  "名の知れた傭兵": {
+    id: "名の知れた傭兵", name: "名の知れた傭兵", cost: 2, type: "unit", atk: 2, hp: 1,
+    effectText: "倒された時：召集兵を1枚場に出す。",
+    onDeath: (game, owner) => game.summonToken(owner, "召集兵")
+  },
+  "不屈の護衛官": {
+    id: "不屈の護衛官", name: "不屈の護衛官", cost: 3, type: "unit", atk: 2, hp: 1,
+    effectText: "護衛。倒された時：治療兵を1枚場に出す。",
+    guard: true,
+    onDeath: (game, owner) => game.summonToken(owner, "治療兵")
+  },
+  "無双の将校": {
+    id: "無双の将校", name: "無双の将校", cost: 4, type: "unit", atk: 1, hp: 1,
+    effectText: "場に出た時：槍兵と尖兵を1枚ずつ場に出す。",
+    onPlay: (game, owner) => {
+      game.summonToken(owner, "槍兵");
+      game.summonToken(owner, "尖兵");
+    }
+  },
+  "伝説的な指揮官": {
+    id: "伝説的な指揮官", name: "伝説的な指揮官", cost: 6, type: "unit", atk: 1, hp: 2,
+    effectText: "場に出た時：疾風騎兵・槍兵・尖兵を1枚ずつ場に出す。",
+    onPlay: (game, owner) => {
+      game.summonToken(owner, "疾風騎兵");
+      game.summonToken(owner, "槍兵");
+      game.summonToken(owner, "尖兵");
     }
   }
 };
 
-/** 初期デッキ構成（30枚）※既存のまま */
+/** 初期デッキ構成（30枚） */
 const INITIAL_DECK = [
   "召集兵", "召集兵",
   "召集", "召集",
@@ -345,27 +539,150 @@ const INITIAL_DECK = [
   "兵団長", "兵団長"
 ];
 
-/** 報酬候補（全カードプールからランダム） */
-function getRewardCards(count = 5) {
-  const ids = Object.keys(CARD_POOL);
-  const result = [];
-  for (let i = 0; i < count; i++) {
-    result.push(ids[Math.floor(Math.random() * ids.length)]);
-  }
-  return result;
+/** レアリティマップ */
+const RARITY_MAP = {
+  "斥候": "epic", "民兵": "epic", "盾兵": "normal", "疾風騎兵": "epic",
+  "治療兵": "epic", "弓兵": "epic", "槍兵": "epic", "重装兵": "normal",
+  "伝令": "epic", "鼓舞する士官": "epic", "斬り込み隊": "epic",
+  "鉄壁の守備兵": "normal", "突撃兵": "epic", "戦医": "epic", "破壊工作員": "ultimate",
+  "精鋭槍兵": "epic", "猛将の護衛": "epic", "火炎弓兵": "ultimate",
+  "大盾兵": "ultimate", "破壊の巨人兵": "ultimate",
+  "応急手当": "normal", "矢の雨": "epic", "補給": "epic", "鼓舞": "epic",
+  "狙撃": "epic", "戦術指揮": "epic", "落石": "normal", "全滅の計": "epic",
+  "大回復": "epic", "処刑": "epic",
+  "野戦病院": "epic", "訓練所": "epic", "矢倉": "epic", "補給基地": "ultimate", "要塞砲台": "ultimate",
+  "偵察兵": "epic", "旗手": "epic", "暗殺者": "ultimate", "補給兵": "epic", "連射弓兵": "epic",
+  "決死隊": "epic", "毒矢": "epic", "緊急徴兵": "epic", "監視塔": "epic", "兵舎": "epic",
+  "王直属近衛": "ultimate", "黒騎兵団": "ultimate", "戦術爆撃": "ultimate",
+  "再生の儀式": "ultimate", "魔法砲台": "ultimate",
+  "名の知れた傭兵": "ultimate", "不屈の護衛官": "ultimate", "無双の将校": "ultimate", "伝説的な指揮官": "epic",
+  "伝説の英雄": "legend", "不滅の守護神": "legend", "終末の宣告": "legend",
+  "無限の兵站": "legend", "世界樹の砦": "legend"
+};
+
+function getRarity(cardId) {
+  if (RARITY_MAP[cardId]) return RARITY_MAP[cardId];
+  if (INITIAL_DECK.includes(cardId)) return "normal";
+  return "epic";
 }
 
-/** 敵用デッキ生成 */
+Object.keys(CARD_POOL).forEach(id => {
+  CARD_POOL[id].rarity = getRarity(id);
+});
+
+const RARITY_LABEL = {
+  normal: "ノーマル",
+  epic: "エピック",
+  ultimate: "アルティメット",
+  legend: "レジェンド"
+};
+
+function getRewardCards(ownedIds) {
+  const owned = new Set(ownedIds);
+  const unowned = Object.keys(CARD_POOL).filter(id => !owned.has(id));
+  const weight = (id) => {
+    const r = getRarity(id);
+    if (r === "legend") return 1;
+    if (r === "ultimate") return 3;
+    if (r === "epic") return 5;
+    return 2;
+  };
+  const pool = unowned.length > 0 ? unowned : Object.keys(CARD_POOL);
+  const picked = [];
+  const used = new Set();
+  const maxTypes = Math.min(4, pool.length);
+  for (let t = 0; t < maxTypes; t++) {
+    const candidates = pool.filter(id => !used.has(id));
+    if (!candidates.length) break;
+    const totalW = candidates.reduce((s, id) => s + weight(id), 0);
+    let r = Math.random() * totalW;
+    let chosen = candidates[0];
+    for (const id of candidates) {
+      r -= weight(id);
+      if (r <= 0) { chosen = id; break; }
+    }
+    used.add(chosen);
+    picked.push(chosen, chosen);
+  }
+  return picked;
+}
+
+function calcClearScore(winStreak, enemyPower) {
+  return 500 + winStreak * 150 + enemyPower * 80;
+}
+
+function getEnemyPower(streak) {
+  return streak;
+}
+
+let _enemyDeckCache = null;
+let _enemyDeckStreak = -1;
+
 function generateEnemyDeck(streak) {
-  const base = [...INITIAL_DECK];
-  const strong = ["上級兵士", "兵団長", "投石部隊", "軍団兵", "破壊の巨人兵", "火炎弓兵", "精鋭槍兵", "全滅の計"];
-  if (streak >= 1) base.push(strong[streak % strong.length]);
-  if (streak >= 2) base.push("上級兵士", "兵団長");
-  if (streak >= 4) base.push("投石部隊", "破壊の巨人兵");
-  if (streak >= 6) base.push("全滅の計", "要塞砲台");
-  while (base.length > 30) base.pop();
-  while (base.length < 30) base.push("中級兵士");
-  return shuffle([...base]);
+  // streak = 勝利数（次の敵の戦数目 - 1）。0=1戦目
+  const battleNum = streak + 1;
+
+  if (_enemyDeckCache && _enemyDeckStreak === streak) {
+    return shuffle([..._enemyDeckCache]);
+  }
+
+  let deck;
+  if (!_enemyDeckCache || streak === 0) {
+    deck = [...INITIAL_DECK];
+  } else {
+    deck = [..._enemyDeckCache];
+  }
+
+  const byRarity = (r) => Object.keys(CARD_POOL).filter(id => getRarity(id) === r);
+  const normalPool = byRarity("normal");
+  const epicPool = byRarity("epic");
+  const ultPool = byRarity("ultimate");
+  const legPool = byRarity("legend");
+
+  // 使用可能レアリティ
+  let upgradePool = [...normalPool];
+  if (battleNum >= 3) upgradePool = upgradePool.concat(epicPool);
+  if (battleNum >= 6) upgradePool = upgradePool.concat(ultPool);
+
+  // 差し替え 1〜2種（1戦目はなし）
+  const replaceCount = battleNum === 1 ? 0 : (1 + (Math.random() < 0.5 ? 1 : 0));
+  for (let i = 0; i < replaceCount && upgradePool.length > 0; i++) {
+    const newId = upgradePool[Math.floor(Math.random() * upgradePool.length)];
+    const weakIdx = [];
+    deck.forEach((id, idx) => {
+      const def = CARD_POOL[id];
+      if (def && def.cost <= 2 && getRarity(id) === "normal") weakIdx.push(idx);
+    });
+    const idx = weakIdx.length
+      ? weakIdx[Math.floor(Math.random() * weakIdx.length)]
+      : Math.floor(Math.random() * deck.length);
+    deck[idx] = newId;
+    if (Math.random() < 0.5) deck[(idx + 1) % deck.length] = newId;
+  }
+
+  // レジェンド：10戦目に1枚、以降5戦ごとに+1
+  let legendCount = 0;
+  if (battleNum >= 10) {
+    legendCount = 1 + Math.floor((battleNum - 10) / 5);
+  }
+  if (legendCount > 0 && legPool.length) {
+    for (let i = 0; i < legendCount; i++) {
+      const inject = legPool[Math.floor(Math.random() * legPool.length)];
+      deck[Math.floor(Math.random() * deck.length)] = inject;
+    }
+  }
+
+  while (deck.length > 30) deck.pop();
+  while (deck.length < 30) deck.push("中級兵士");
+
+  _enemyDeckCache = [...deck];
+  _enemyDeckStreak = streak;
+  return shuffle([...deck]);
+}
+
+function resetEnemyDeckCache() {
+  _enemyDeckCache = null;
+  _enemyDeckStreak = -1;
 }
 
 function shuffle(arr) {
@@ -397,6 +714,11 @@ function createCardInstance(cardId, owner) {
     activateCost: def.activateCost ?? 0,
     needsTarget: !!def.needsTarget,
     needsTargetAlly: !!def.needsTargetAlly,
-    rush: !!def.rush
+    needsTargetOrPlayer: !!def.needsTargetOrPlayer,
+    rush: !!def.rush,
+    charge: !!def.charge,
+    guard: !!def.guard,
+    onDeath: def.onDeath || null,
+    rarity: def.rarity || getRarity(cardId)
   };
 }
