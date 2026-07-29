@@ -1942,3 +1942,39 @@ body.is-mobile .modal-content {
   line-height: 1.45;
   color: #c8d0dc;
 }
+
+/* プレイ確定バー */
+.play-confirm-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  background: rgba(20, 30, 50, 0.95);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.play-confirm-bar.hidden { display: none !important; }
+.play-confirm-bar #play-confirm-name {
+  font-weight: bold;
+  color: #ffd700;
+  font-size: 0.95rem;
+  margin-right: 4px;
+}
+.play-confirm-bar .btn {
+  min-height: 44px;
+  min-width: 72px;
+}
+
+/* 詳細ツールチップはクリックを通す（プレイ操作を阻害しない） */
+.card-tooltip {
+  pointer-events: none !important;
+}
+.card.show-tooltip .card-tooltip {
+  pointer-events: none !important;
+}
