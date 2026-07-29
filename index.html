@@ -17,7 +17,8 @@
       <p class="subtitle">連勝を目指せ</p>
       <div class="button-row" style="margin-top:0;">
         <button id="btn-start" class="btn primary">新しい挑戦を始める</button>
-        <button id="btn-continue" class="btn hidden">挑戦を再開（連勝 <span id="continue-streak">0</span>）</button>
+        <p class="high-score-line">ハイスコア: <strong id="high-score">0</strong>　（最高連勝: <strong id="high-streak">0</strong>）</p>
+        <button id="btn-continue" class="btn hidden">挑戦を再開（連勝 <span id="continue-streak">0</span>）→ デッキ編成</button>
       </div>
       <div class="rules-box">
         <h3>基本ルール</h3>
@@ -38,11 +39,11 @@
       <p class="deck-status" id="deck-status-text">デッキ枚数: <strong id="deck-count">0</strong> / 30</p>
       <div class="deckbuild-layout">
         <div class="pool-panel">
-          <h3 id="pool-title">カードプール</h3>
+          <h3 id="pool-title">カードリスト（所持）</h3>
           <div id="card-pool" class="pool-list"></div>
         </div>
         <div class="deck-panel">
-          <h3>現在のデッキ</h3>
+          <h3>デッキリスト（<span id="deck-count-side">0</span>/30）</h3>
           <div id="current-deck" class="deck-list"></div>
         </div>
       </div>
@@ -81,6 +82,7 @@
                   <strong id="enemy-hp">20</strong>
                   <div class="hp-bar-wrap sv-hp-bar"><div class="hp-bar enemy" id="enemy-hp-bar"></div></div>
                 </div>
+                <div class="enemy-hand-info">手札 <strong id="enemy-hand-count">0</strong></div>
               </div>
             </div>
           </div>
@@ -153,7 +155,7 @@
         <div class="keyword-help-body">
           <div class="kw-item">
             <div class="kw-title">🛡️ 護衛</div>
-            <p>このユニットが場にいる限り、相手はリーダー（プレイヤー）に直接攻撃できない。護衛ユニットへの攻撃は可能。</p>
+            <p>このユニットが場にいる限り、相手は護衛を持たないユニットやリーダー（プレイヤー）に攻撃できない。攻撃は護衛ユニットにしか行えない。</p>
           </div>
           <div class="kw-item">
             <div class="kw-title">✊ 突撃</div>
@@ -199,6 +201,7 @@
       <h2>敗北...</h2>
       <p>連勝記録: <strong id="final-streak">0</strong></p>
       <p>クリアスコア: <strong id="final-score">0</strong></p>
+      <p class="high-score-line">ハイスコア: <strong id="final-high-score">0</strong></p>
       <button id="btn-retry" class="btn primary">タイトルへ</button>
     </div>
   </div>

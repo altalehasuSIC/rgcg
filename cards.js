@@ -33,7 +33,7 @@ const CARD_POOL = {
   },
   "尖兵": {
     id: "尖兵", name: "尖兵", cost: 2, type: "unit", atk: 1, hp: 3,
-    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    effectText: "護衛（これがいる限り、相手は護衛以外のユニットやプレイヤーに攻撃できない）。",
     guard: true
   },
 
@@ -164,7 +164,7 @@ const CARD_POOL = {
   // 4コスト
   "鉄壁の守備兵": {
     id: "鉄壁の守備兵", name: "鉄壁の守備兵", cost: 4, type: "unit", atk: 2, hp: 6,
-    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    effectText: "護衛（これがいる限り、相手は護衛以外のユニットやプレイヤーに攻撃できない）。",
     guard: true
   },
   "突撃兵": {
@@ -216,7 +216,7 @@ const CARD_POOL = {
   // 6〜7コスト
   "大盾兵": {
     id: "大盾兵", name: "大盾兵", cost: 6, type: "unit", atk: 3, hp: 8,
-    effectText: "護衛（これがいる限り、相手はプレイヤーに攻撃できない）。",
+    effectText: "護衛（これがいる限り、相手は護衛以外のユニットやプレイヤーに攻撃できない）。",
     guard: true
   },
   "破壊の巨人兵": {
@@ -324,8 +324,8 @@ const CARD_POOL = {
   },
   "矢倉": {
     id: "矢倉", name: "矢倉", cost: 2, type: "field",
-    effectText: "起動：コスト1を支払い、相手のユニット全てに1ダメージ。",
-    activateCost: 1,
+    effectText: "起動：コスト2を支払い、相手のユニット全てに1ダメージ。",
+    activateCost: 2,
     effect: (game, owner) => {
       const enemy = owner === "player" ? "enemy" : "player";
       game.damageAllUnits(enemy, 1);
@@ -439,8 +439,8 @@ const CARD_POOL = {
   },
   "魔法砲台": {
     id: "魔法砲台", name: "魔法砲台", cost: 5, type: "field",
-    effectText: "起動：コスト2を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
-    activateCost: 2,
+    effectText: "起動：コスト3を支払い、相手のユニット1体またはプレイヤーに3ダメージ。",
+    activateCost: 3,
     needsTargetOrPlayer: true,
     effect: (game, owner, targetUid) => {
       if (targetUid === "player") game.damagePlayer(owner === "player" ? "enemy" : "player", 3);

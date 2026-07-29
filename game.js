@@ -50,6 +50,46 @@ class Game {
     };
   }
 
+  loadHighScore() {
+    try {
+      const raw = localStorage.getItem("rcg_highscore");
+      if (!raw) return { score: 0, streak: 0 };
+      const data = JSON.parse(raw);
+      return { score: data.score || 0, streak: data.streak || 0 };
+    } catch (e) {
+      return { score: 0, streak: 0 };
+    }
+  }
+
+  saveHighScoreIfNeeded() {
+    const cur = this.loadHighScore();
+    let changed = false;
+    if ((this.runScore || 0) > cur.score) {
+      cur.score = this.runScore;
+      changed = true;
+    }
+    if ((this.winStreak || 0) > cur.streak) {
+      cur.streak = this.winStreak;
+      changed = true;
+    }
+    if (changed) {
+      try {
+        localStorage.setItem("rcg_highscore", JSON.stringify(cur));
+      } catch (e) {}
+    }
+    return cur;
+  }
+
+  updateHighScoreDisplay() {
+    const hs = this.loadHighScore();
+    const el = document.getElementById("high-score");
+    const st = document.getElementById("high-streak");
+    if (el) el.textContent = hs.score;
+    if (st) st.textContent = hs.streak;
+    const fe = document.getElementById("final-high-score");
+    if (fe) fe.textContent = hs.score;
+  }
+
   isTouchDevice() {
     return window.matchMedia("(pointer: coarse)").matches ||
            ("ontouchstart" in window) ||
@@ -99,6 +139,7 @@ class Game {
   }
 
   updateTitleContinue() {
+    this.updateHighScoreDisplay();
     const btn = document.getElementById("btn-continue");
     if (this.hasActiveRun && this.collection.length > 0) {
       btn.classList.remove("hidden");
@@ -109,12 +150,8 @@ class Game {
   }
 
   continueRun() {
-    // デッキが30枚ならマリガンから、そうでなければデッキ編集
-    if (this.runDeck.length === 30) {
-      this.startNextBattle();
-    } else {
-      this.openDeckBuilder("mid");
-    }
+    // 再開時は必ずデッキ編成へ
+    this.openDeckBuilder("mid");
   }
 
   resetToTitle() {
@@ -136,7 +173,7 @@ class Game {
       document.getElementById("deckbuild-title").textContent = "デッキ構築";
       document.getElementById("deck-status-text").innerHTML =
         'デッキ枚数: <strong id="deck-count">0</strong> / 30　（同一カードは最大2枚）';
-      document.getElementById("pool-title").textContent = "カードプール";
+      document.getElementById("pool-title").textContent = "カードリスト";
       document.getElementById("btn-reset-deck").textContent = "初期デッキに戻す";
       document.getElementById("btn-confirm-deck").textContent = "このデッキで挑戦開始";
     } else {
@@ -216,6 +253,11 @@ class Game {
     if (countEl) {
       countEl.textContent = total;
       countEl.style.color = total === 30 ? "#50c878" : "#e94560";
+    }
+    const side = document.getElementById("deck-count-side");
+    if (side) {
+      side.textContent = total;
+      side.style.color = total === 30 ? "#50c878" : "#e94560";
     }
     confirmBtn.disabled = total !== 30;
 
@@ -934,7 +976,7 @@ class Game {
     }
     this.selectedUnitUid = uid;
     this.pendingTarget = { type: "attack", attackerUid: uid };
-    this.log(`${card.name}で攻撃する対象を選んでください（敵ユニット or 「プレイヤーに攻撃」）。キャンセル可`);
+    this.log(`${card.name}で攻撃対象を選んでください。護衛がいる場合は護衛ユニットのみ。キャンセル可`);
     this.updateCancelButton();
     this.updateUI();
   }
@@ -944,6 +986,12 @@ class Game {
     const attacker = this.player.field.find(c => c.uid === this.pendingTarget.attackerUid);
     const target = this.enemy.field.find(c => c.uid === targetUid);
     if (!attacker || !target || target.type !== "unit") return;
+
+    // 護衛がいる場合は護衛ユニットのみ攻撃可能
+    if (this.enemyHasGuard() && !target.guard) {
+      this.log("護衛ユニットがいるため、護衛を持たないユニットには攻撃できない。");
+      return;
+    }
 
     this.log(`${attacker.name}が${target.name}に攻撃！`);
     target.hp -= attacker.atk;
@@ -1081,9 +1129,11 @@ class Game {
 
   loseBattle() {
     this.hasActiveRun = false;
+    this.saveHighScoreIfNeeded();
     document.getElementById("final-streak").textContent = this.winStreak;
     const fs = document.getElementById("final-score");
     if (fs) fs.textContent = this.runScore;
+    this.updateHighScoreDisplay();
     this.showScreen("gameover-screen");
   }
 
@@ -1286,13 +1336,6 @@ class Game {
     if (this.checkWinLose()) return;
 
     const attackers = e.field.filter(c => c.type === "unit" && !c.exhausted);
-    // フェイスで倒せるなら優先
-    const faceReady = attackers.filter(a => {
-      if (a.charge && !a.rush && a._summonTurnFaceBlock) return false;
-      return true;
-    });
-    const totalAtk = faceReady.reduce((s, a) => s + a.atk, 0);
-    const canLethal = !this.playerHasGuard() && totalAtk >= this.player.hp;
 
     for (const atk of attackers) {
       let targets = this.player.field.filter(c => c.type === "unit");
@@ -1301,50 +1344,55 @@ class Game {
 
       const faceBlocked = this.playerHasGuard() || (atk.charge && !atk.rush && atk._summonTurnFaceBlock);
 
-      if (canLethal && !faceBlocked && guards.length === 0) {
+      // 候補を分類
+      // ① 一方的に倒せる（相手は死に、自分は生き残る）
+      const oneSided = targets.filter(u => u.hp <= atk.atk && atk.hp > u.atk);
+      // ② 相打ち（お互い死ぬ）
+      const trades = targets.filter(u => u.hp <= atk.atk && atk.hp <= u.atk);
+
+      let chosen = null;
+      let preferFace = false;
+
+      if (oneSided.length > 0) {
+        // ① 一方キル：最も脅威（攻撃高）を優先
+        oneSided.sort((a, b) => (b.atk - a.atk) || (a.hp - b.hp));
+        chosen = oneSided[0];
+      } else if (trades.length > 0) {
+        // ② 相打ち：自分の攻撃力の方が低い相手だけ交換（高攻撃の脅威除去）
+        const goodTrades = trades.filter(u => atk.atk < u.atk);
+        if (goodTrades.length > 0) {
+          goodTrades.sort((a, b) => (b.atk - a.atk) || (a.hp - b.hp));
+          chosen = goodTrades[0];
+        } else {
+          // ③ 攻撃力同じ or 自分の方が高い → リーダー攻撃を優先
+          preferFace = true;
+        }
+      } else {
+        // 倒せない対象しかいない → リーダーへ（可能な場合）
+        preferFace = true;
+      }
+
+      if (chosen) {
+        this.log(`敵の${atk.name}が${chosen.name}に攻撃！`);
+        chosen.hp -= atk.atk;
+        atk.hp -= chosen.atk;
+        atk.exhausted = true;
+      } else if (preferFace && !faceBlocked) {
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;
         atk.exhausted = true;
-      } else if (targets.length > 0) {
-        // 有利交換のみ：倒せる、または相打ちで相手の方が脅威
-        // 「自分だけ失う」交換はしない → フェイス可能な場合はフェイスへ
-        const killable = targets.filter(u => u.hp <= atk.atk);
-        let t = null;
-        if (killable.length) {
-          // 倒せる中で最も脅威（攻撃高）を優先。反撃で死ぬ場合は、相手の方が高攻撃なら許容
-          killable.sort((a, b) => (b.atk - a.atk) || (a.hp - b.hp));
-          for (const cand of killable) {
-            const wouldDie = atk.hp <= cand.atk;
-            if (!wouldDie) { t = cand; break; }
-            // 相打ち：相手の攻撃が自分以上なら交換する価値あり
-            if (cand.atk >= atk.atk) { t = cand; break; }
-          }
-        }
-        if (!t) {
-          // 倒せない対象への攻撃＝自分が一方的に削られるだけなら避ける
-          // フェイス可能ならフェイス
-          if (!faceBlocked) {
-            this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
-            this.player.hp -= atk.atk;
-            atk.exhausted = true;
-          } else {
-            // 護衛でフェイス不可かつ不利交換しかない → 攻撃しない
-            this.log(`敵の${atk.name}は不利な攻撃を見送った。`);
-            atk.exhausted = true;
-          }
-        } else {
-          this.log(`敵の${atk.name}が${t.name}に攻撃！`);
-          t.hp -= atk.atk;
-          atk.hp -= t.atk;
-          atk.exhausted = true;
-        }
-      } else if (!faceBlocked) {
+      } else if (!faceBlocked && targets.length === 0) {
         this.log(`敵の${atk.name}があなたに${atk.atk}ダメージ！`);
         this.player.hp -= atk.atk;
         atk.exhausted = true;
       } else {
+        // 攻撃できない／不利のみ → 見送り
+        if (targets.length > 0) {
+          this.log(`敵の${atk.name}は攻撃を見送った。`);
+        }
         atk.exhausted = true;
       }
+
       this.checkDeaths();
       if (this.checkWinLose()) return;
     }
@@ -1492,8 +1540,11 @@ class Game {
 
       if (this.pendingTarget) {
         if (this.pendingTarget.type === "attack" && c.type === "unit") {
-          el.classList.add("targetable");
-          el.onclick = () => this.attackUnit(c.uid);
+          const mustGuard = this.enemyHasGuard();
+          if (!mustGuard || c.guard) {
+            el.classList.add("targetable");
+            el.onclick = () => this.attackUnit(c.uid);
+          }
         } else if ((this.pendingTarget.type === "playOnPlay" || this.pendingTarget.type === "spellTarget")) {
           const def = CARD_POOL[this.player.hand[this.pendingTarget.handIdx]?.cardId];
           const allowField = def && def.canTargetField;
@@ -1599,6 +1650,7 @@ class Game {
 
 window.addEventListener("DOMContentLoaded", () => {
   window.game = new Game();
+  window.game.updateTitleContinue();
   if (window.game.isTouchDevice()) {
     document.body.classList.add("is-mobile");
   }
