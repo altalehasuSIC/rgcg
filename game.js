@@ -34,6 +34,13 @@ class Game {
     document.getElementById("btn-cancel").onclick = () => this.cancelPending();
     document.getElementById("btn-retire").onclick = () => this.retire();
     document.getElementById("btn-show-log").onclick = () => this.showLogModal();
+    const kwHelp = document.getElementById("btn-keyword-help");
+    if (kwHelp) kwHelp.onclick = () => this.showKeywordHelp();
+    const kwClose = document.getElementById("btn-close-keyword");
+    if (kwClose) kwClose.onclick = () => {
+      document.getElementById("keyword-modal").classList.add("hidden");
+    };
+
     document.getElementById("btn-close-log").onclick = () => this.hideLogModal();
     document.getElementById("btn-edit-deck-mid").onclick = () => this.openDeckBuilder("mid");
     document.getElementById("btn-reward-to-title").onclick = () => this.goTitleKeepProgress();
@@ -51,7 +58,10 @@ class Game {
 
   clearHandTap() {
     this._handTapUid = null;
+    this._selectedHandUid = null;
     document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
+    document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+    this.updateUIBoardHighlight();
   }
 
   log(msg) {
@@ -61,6 +71,11 @@ class Game {
     p.textContent = msg;
     el.prepend(p);
     while (el.children.length > 80) el.removeChild(el.lastChild);
+  }
+
+  showKeywordHelp() {
+    const m = document.getElementById("keyword-modal");
+    if (m) m.classList.remove("hidden");
   }
 
   showLogModal() {
@@ -487,9 +502,27 @@ class Game {
     }
     const card = createCardInstance(cardId, who);
     if (!card) return false;
-    card.exhausted = true;
+    // キーワード：速攻・突撃
+    card.exhausted = (card.rush || card.charge) ? false : true;
+    if (card.charge && !card.rush) card._summonTurnFaceBlock = true;
     p.field.push(card);
     this.log(`${card.name}を場に出した。`);
+    // 場に出た時効果（対象不要のみ自動誘発。対象必要はランダム or スキップ）
+    const def = CARD_POOL[cardId];
+    if (def && def.onPlay) {
+      if (def.needsTarget) {
+        const enemies = (who === "player" ? this.enemy : this.player).field.filter(c => c.type === "unit");
+        const t = enemies.length ? enemies[Math.floor(Math.random() * enemies.length)] : null;
+        def.onPlay(this, who, t ? t.uid : null);
+      } else if (def.needsTargetAlly) {
+        const allies = p.field.filter(c => c.type === "unit" && c.uid !== card.uid);
+        const t = allies.length ? allies[Math.floor(Math.random() * allies.length)] : null;
+        def.onPlay(this, who, t ? t.uid : null);
+      } else {
+        def.onPlay(this, who);
+      }
+    }
+    this.checkDeaths();
     return true;
   }
 
@@ -1139,7 +1172,7 @@ class Game {
       }
     }
 
-    // 手札（ダブルクリックでプレイ）
+    // 手札：クリック/タップで選択＋詳細表示 → 場をクリックでプレイ
     const handEl = document.getElementById("player-hand");
     handEl.innerHTML = "";
     this.player.hand.forEach(c => {
@@ -1149,51 +1182,23 @@ class Game {
           el.classList.add("can-play");
         }
       }
-      const play = () => {
-        if (this.pendingTarget) return;
-        this.tryPlayCard(c.uid);
-      };
-      if (this.isTouchDevice()) {
-        // スマホ: 2回タップでプレイ / 長押しで詳細
-        let pressTimer = null;
-        let longPressed = false;
-        let lastTap = 0;
-        el.addEventListener("touchstart", (e) => {
-          longPressed = false;
-          pressTimer = setTimeout(() => {
-            longPressed = true;
-            this._handTapUid = null;
-            document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
-            document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
-            el.classList.add("show-tooltip");
-          }, 500);
-        }, { passive: true });
-        el.addEventListener("touchend", (e) => {
-          clearTimeout(pressTimer);
-          if (longPressed) {
-            e.preventDefault();
-            return;
-          }
-          const now = Date.now();
-          if (this._handTapUid === c.uid && now - lastTap < 600) {
-            // 2回目タップ → プレイ
-            this._handTapUid = null;
-            el.classList.remove("tap-armed");
-            play();
-          } else {
-            // 1回目タップ → 選択表示
-            document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
-            document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
-            this._handTapUid = c.uid;
-            lastTap = now;
-            el.classList.add("tap-armed");
-            this.log(`${c.name}を選択（もう一度タップでプレイ）`);
-          }
-        });
-        el.addEventListener("touchmove", () => clearTimeout(pressTimer), { passive: true });
-      } else {
-        el.ondblclick = play;
+      if (this._selectedHandUid === c.uid) {
+        el.classList.add("tap-armed");
+        el.classList.add("show-tooltip");
       }
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (this.pendingTarget) return;
+        if (this.currentPlayer !== "player") return;
+        // 選択＋詳細
+        document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+        document.querySelectorAll(".card.tap-armed").forEach(x => x.classList.remove("tap-armed"));
+        this._selectedHandUid = c.uid;
+        el.classList.add("tap-armed");
+        el.classList.add("show-tooltip");
+        this.log(`${c.name}を選択（場をクリックしてプレイ）`);
+        this.updateUIBoardHighlight();
+      };
       handEl.appendChild(el);
     });
 
@@ -1223,7 +1228,32 @@ class Game {
           }
         };
       }
+      // 場のカード詳細タップ
+      if (!el.onclick) {
+        el.onclick = () => {
+          document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+          el.classList.add("show-tooltip");
+        };
+      } else {
+        const prev = el.onclick;
+        el.onclick = (ev) => {
+          if (this._selectedHandUid && !this.pendingTarget) {
+            // 手札選択中に場のカードをタップしてもプレイ確定
+            this.confirmPlaySelected();
+            return;
+          }
+          prev(ev);
+        };
+      }
       pf.appendChild(el);
+    });
+
+    // 場（空き部分）をクリックで手札選択中のカードをプレイ
+    pf.addEventListener("click", (e) => {
+      if (!this._selectedHandUid || this.pendingTarget) return;
+      // 場のカード自身のクリックは各カードのハンドラで処理
+      if (e.target.closest && e.target.closest(".card")) return;
+      this.confirmPlaySelected();
     });
 
     // 敵の場
@@ -1248,6 +1278,12 @@ class Game {
           el.classList.add("targetable");
           el.onclick = () => this.resolveFieldTarget(c.uid);
         }
+      }
+      if (!el.onclick) {
+        el.onclick = () => {
+          document.querySelectorAll(".card.show-tooltip").forEach(x => x.classList.remove("show-tooltip"));
+          el.classList.add("show-tooltip");
+        };
       }
       ef.appendChild(el);
     });
@@ -1320,7 +1356,7 @@ class Game {
       <div class="type-label">${typeLabel}</div>
       <div class="effect">${card.effectText || ""}</div>
       ${statsHtml}
-      <div class="rarity-row"><span class="rarity-dot rarity-${rarity}" title="${rarityLabel}"></span></div>
+      <div class="rarity-row">${rarity === "normal" ? "" : `<span class="rarity-dot rarity-${rarity}" title="${rarityLabel}"></span>`}</div>
       <div class="card-tooltip">
         <div class="tt-name">${card.name}</div>
         <div class="tt-meta">コスト ${card.cost}　／　${typeLabel}　／　${rarityLabel}</div>

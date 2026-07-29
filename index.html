@@ -120,7 +120,7 @@
           <!-- 手札 -->
           <div class="sv-hand-row hand-section">
             <div id="player-hand" class="hand-area sv-hand"></div>
-            <div class="sv-hand-hint hint">PC:ダブルクリック / スマホ:2回タップでプレイ</div>
+            <div class="sv-hand-hint hint">手札を選択 → 場をタップしてプレイ</div>
           </div>
         </div>
 
@@ -135,8 +135,37 @@
           <button id="btn-attack-player" class="btn sv-face-btn" disabled>リーダーに攻撃</button>
           <button id="btn-cancel" class="btn warning hidden">キャンセル</button>
           <div class="sv-side-tools">
+            <button id="btn-keyword-help" class="btn">キーワード</button>
             <button id="btn-show-log" class="btn">ログ</button>
             <button id="btn-retire" class="btn danger">リタイア</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- キーワードヘルプ -->
+    <div id="keyword-modal" class="modal hidden">
+      <div class="modal-content log-modal-content">
+        <div class="modal-header">
+          <h3>キーワード能力</h3>
+          <button id="btn-close-keyword" class="btn">閉じる</button>
+        </div>
+        <div class="keyword-help-body">
+          <div class="kw-item">
+            <div class="kw-title">🛡️ 護衛</div>
+            <p>このユニットが場にいる限り、相手はリーダー（プレイヤー）に直接攻撃できない。護衛ユニットへの攻撃は可能。</p>
+          </div>
+          <div class="kw-item">
+            <div class="kw-title">✊ 突撃</div>
+            <p>場に出たターンに、相手のユニットへ攻撃できる。リーダーへの直接攻撃は出たターンは不可。</p>
+          </div>
+          <div class="kw-item">
+            <div class="kw-title">💨 速攻</div>
+            <p>場に出たターンでも、ユニット・リーダーのどちらにも攻撃できる。</p>
+          </div>
+          <div class="kw-item">
+            <div class="kw-title">操作のヒント</div>
+            <p>手札のカードをタップして選択（詳細表示）→ 自分の場をタップしてプレイ。対象が必要な効果は続けて対象を選択。</p>
           </div>
         </div>
       </div>
