@@ -18,28 +18,21 @@ class BgmManager {
     this.unlocked = false;
     this.currentTrack = null;
     this.currentSrc = null;
-    // バトル用BGM（戦闘開始ごとにランダムで1曲）
     this.battleTracks = [
       "bgm/battle1.mp3",
       "bgm/battle2.mp3",
       "bgm/battle3.mp3",
       "bgm/battle4.mp3",
     ];
-    this.audio.volume = this.volume;
+    this._pendingScreen = null;
 
-    // ローカル保存
     try {
       const v = localStorage.getItem("rcg_bgm_vol");
       const m = localStorage.getItem("rcg_bgm_mute");
       if (v != null) this.volume = Math.max(0, Math.min(1, Number(v)));
       if (m != null) this.muted = m === "1";
-      this.audio.volume = this.muted ? 0 : this.volume;
     } catch (_) {}
-
-    this.audio.addEventListener("error", () => {
-      // ファイル未配置時は静かに失敗
-      console.info("[BGM] 再生できないかファイルがありません:", this.currentTrack);
-    });
+    this.audio.volume = this.muted ? 0 : this.volume;
   }
 
   bindUI() {
@@ -49,25 +42,38 @@ class BgmManager {
       slider.value = String(Math.round(this.volume * 100));
       slider.oninput = () => {
         this.volume = Number(slider.value) / 100;
-        if (!this.muted) this.audio.volume = this.volume;
+        this.audio.volume = this.muted ? 0 : this.volume;
         try { localStorage.setItem("rcg_bgm_vol", String(this.volume)); } catch (_) {}
+        this._updateBtn();
       };
     }
     if (btn) {
-      btn.onclick = () => this.toggleMute();
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 初回クリックでアンロック＋再生、以降はミュート切替
+        if (!this.unlocked) {
+          this.unlock();
+          return;
+        }
+        this.toggleMute();
+      };
       this._updateBtn();
     }
-    // ユーザー操作でアンロック
+
     const unlock = () => this.unlock();
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchend", unlock, { once: true });
+    ["pointerdown", "click", "touchstart", "keydown"].forEach(ev => {
+      document.addEventListener(ev, unlock, { once: true, capture: true });
+    });
   }
 
   _updateBtn() {
     const btn = document.getElementById("btn-bgm-toggle");
     if (!btn) return;
-    btn.classList.toggle("muted", this.muted || this.volume === 0);
-    btn.textContent = (this.muted || this.volume === 0) ? "♪̸" : "♪";
+    const off = this.muted || this.volume === 0;
+    btn.classList.toggle("muted", off);
+    btn.textContent = off ? "🔇" : "♪";
+    btn.title = off ? "BGMオフ（クリックでオン）" : "BGMオン（クリックでミュート）";
   }
 
   toggleMute() {
@@ -75,113 +81,112 @@ class BgmManager {
     this.audio.volume = this.muted ? 0 : this.volume;
     try { localStorage.setItem("rcg_bgm_mute", this.muted ? "1" : "0"); } catch (_) {}
     this._updateBtn();
-    if (!this.muted && this.unlocked && this.currentTrack) {
-      this.audio.play().catch(() => {});
-    }
+    if (!this.muted) this._tryPlay();
   }
 
   unlock() {
-    if (this.unlocked) return;
-    this.unlocked = true;
-    // 無音再生でアンロックを試みる
-    this.audio.play().then(() => {
-      if (!this.currentTrack) this.audio.pause();
-    }).catch(() => {});
-    if (this.currentTrack) this.play(this.currentTrack, true);
-  }
-
-  _candidates(name) {
-    const exts = ["mp3", "ogg", "wav", "m4a"];
-    const list = [];
-    for (const ext of exts) list.push(`bgm/${name}.${ext}`);
-    return list;
-  }
-
-  async _resolveSrc(track) {
-    // track: title | battle | reward | main
-    // file:// や簡易サーバでは存在確認が難しいので優先パスを返す
-    const names = track === "main" ? ["main"] : [track, "main"];
-    for (const name of names) {
-      const paths = this._candidates(name);
-      for (const path of paths) {
-        try {
-          const res = await fetch(path, { method: "HEAD" });
-          if (res.ok) return path;
-        } catch (_) {
-          // オフライン/file は最初の候補を採用
-        }
-      }
+    if (this.unlocked) {
+      this._tryPlay();
+      return;
     }
-    return this._candidates(names[0])[0];
+    this.unlocked = true;
+    // 保留中の画面BGM、または現在のソースを再生
+    if (this.currentSrc) {
+      this._tryPlay();
+    } else if (this._pendingScreen) {
+      this.forScreen(this._pendingScreen);
+    } else {
+      // タイトル時点ではバトル曲がないので、何もしない
+      this._tryPlay();
+    }
   }
 
-  async play(track, force = false) {
-    if (!track) return;
-    if (!force && this.currentTrack === track && !this.audio.paused) return;
-    this.currentTrack = track;
+  _tryPlay() {
+    if (!this.unlocked || this.muted) return;
+    if (!this.currentSrc && !this.audio.src) return;
+    this.audio.volume = this.volume;
+    const p = this.audio.play();
+    if (p && typeof p.then === "function") {
+      p.catch(err => {
+        console.info("[BGM] play() blocked or failed:", err && err.message);
+      });
+    }
+  }
 
-    const names = track === "main" ? ["main"] : [track, "main"];
-    const candidates = [];
-    for (const name of names) candidates.push(...this._candidates(name));
-
-    const tryPlay = (idx) => {
-      if (idx >= candidates.length) return;
-      const src = candidates[idx];
-      const onErr = () => {
-        this.audio.removeEventListener("error", onErr);
-        tryPlay(idx + 1);
-      };
-      this.audio.addEventListener("error", onErr);
-      this.audio.loop = true;
+  playSrc(src, trackLabel) {
+    if (!src) return;
+    // 同じ曲で再生中ならそのまま
+    if (this.currentSrc === src && !this.audio.paused) {
       this.audio.volume = this.muted ? 0 : this.volume;
-      this.audio.src = src;
-      this.audio.load();
-      if (this.unlocked) {
-        this.audio.play().then(() => {
-          this.audio.removeEventListener("error", onErr);
-        }).catch(() => {
-          // autoplay制限など。アンロック後に再試行
-        });
-      }
+      return;
+    }
+    this.currentTrack = trackLabel || src;
+    this.currentSrc = src;
+    this.audio.loop = true;
+    this.audio.volume = this.muted ? 0 : this.volume;
+
+    const onReady = () => {
+      this.audio.removeEventListener("canplay", onReady);
+      this._tryPlay();
     };
-    tryPlay(0);
+    this.audio.addEventListener("canplay", onReady);
+    this.audio.src = src;
+    try { this.audio.load(); } catch (_) {}
+    // canplay がすぐ来ない場合も試す
+    this._tryPlay();
   }
 
-  stop() {
+  /** タイトル等：専用曲がない場合は停止（バトル曲を流し続けない） */
+  playOptional(name) {
+    // title / reward / main が無ければ無音
+    const candidates = [
+      `bgm/${name}.mp3`,
+      `bgm/${name}.ogg`,
+      "bgm/main.mp3",
+      "bgm/main.ogg",
+    ];
+    // ファイル存在を保証できないので、バトル中以外は一旦停止
+    // （任意ファイルが置かれたときだけ再生したい場合は下記を有効化）
     this.audio.pause();
-    this.audio.currentTime = 0;
+    this.currentSrc = null;
     this.currentTrack = null;
+    // 任意BGMがあれば再生を試みる
+    const tryNext = (i) => {
+      if (i >= candidates.length) return;
+      const src = candidates[i];
+      const a = new Audio();
+      a.addEventListener("error", () => tryNext(i + 1));
+      a.addEventListener("canplay", () => {
+        this.playSrc(src, name);
+      });
+      a.src = src;
+      try { a.load(); } catch (_) { tryNext(i + 1); }
+    };
+    tryNext(0);
   }
 
-  /** 画面IDに応じたBGM */
-  forScreen(screenId) {
-    if (screenId === "battle-screen") return this.playBattleRandom();
-    if (screenId === "reward-screen" || screenId === "gameover-screen") return this.play("reward");
-    // title, deckbuild, mulligan など
-    return this.play("title");
-  }
-
-  /** バトル開始時: 4曲からランダムに1曲をループ再生 */
   playBattleRandom() {
-    if (!this.battleTracks.length) return this.play("battle");
-    // 直前と同じ曲を避けつつランダム
+    if (!this.battleTracks.length) return;
     let pick = this.battleTracks[Math.floor(Math.random() * this.battleTracks.length)];
     if (this.battleTracks.length > 1 && this.currentSrc) {
       const others = this.battleTracks.filter(s => s !== this.currentSrc);
       if (others.length) pick = others[Math.floor(Math.random() * others.length)];
     }
-    return this.playSrc(pick, "battle");
+    console.info("[BGM] battle track:", pick);
+    this.playSrc(pick, "battle");
   }
 
-  playSrc(src, trackLabel) {
-    this.currentTrack = trackLabel || src;
-    this.currentSrc = src;
-    this.audio.loop = true;
-    this.audio.volume = this.muted ? 0 : this.volume;
-    this.audio.src = src;
-    this.audio.load();
-    if (this.unlocked) {
-      this.audio.play().catch(() => {});
+  forScreen(screenId) {
+    this._pendingScreen = screenId;
+    if (screenId === "battle-screen") {
+      this.playBattleRandom();
+      return;
+    }
+    // 戦闘以外は専用BGMが無ければ止める
+    if (screenId === "reward-screen" || screenId === "gameover-screen") {
+      this.playOptional("reward");
+    } else {
+      this.playOptional("title");
     }
   }
 }
@@ -207,10 +212,14 @@ class Game {
 
   bindUI() {
     document.getElementById("btn-start").onclick = () => {
+      if (this.bgm) this.bgm.unlock();
       this.hasActiveRun = false;
       this.openDeckBuilder("start");
     };
-    document.getElementById("btn-continue").onclick = () => this.continueRun();
+    document.getElementById("btn-continue").onclick = () => {
+      if (this.bgm) this.bgm.unlock();
+      this.continueRun();
+    };
     document.getElementById("btn-reset-deck").onclick = () => this.resetBuilderDeck();
     document.getElementById("btn-confirm-deck").onclick = () => this.confirmDeck();
     document.getElementById("btn-deck-to-title").onclick = () => this.goTitleKeepProgress();
