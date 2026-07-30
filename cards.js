@@ -416,9 +416,12 @@ const CARD_POOL = {
   },
   "黒騎兵団": {
     id: "黒騎兵団", name: "黒騎兵団", cost: 5, type: "unit", atk: 5, hp: 3,
-    effectText: "速攻。場に出た時：相手プレイヤーに2ダメージ。",
+    effectText: "速攻。場に出た時：相手のユニット1体に2ダメージ。",
     rush: true,
-    onPlay: (game, owner) => game.damagePlayer(owner === "player" ? "enemy" : "player", 2)
+    needsTarget: true,
+    onPlay: (game, owner, targetUid) => {
+      if (targetUid != null) game.damageUnit(targetUid, 2);
+    }
   },
   "戦術爆撃": {
     id: "戦術爆撃", name: "戦術爆撃", cost: 5, type: "spell",
@@ -554,11 +557,28 @@ const CARD_POOL = {
   },
   "伝説級騎士団長": {
     id: "伝説級騎士団長", name: "伝説級騎士団長", cost: 7, type: "unit", atk: 3, hp: 7,
-    effectText: "護衛。場に出た時：兵団長と精鋭槍兵を1体ずつ場に出す。",
+    effectText: "護衛。場に出た時：精鋭槍兵と槍兵を1体ずつ場に出す。",
     guard: true,
     onPlay: (game, owner) => {
-      game.summonToken(owner, "兵団長");
       game.summonToken(owner, "精鋭槍兵");
+      game.summonToken(owner, "槍兵");
+    }
+  },
+  "荒くれもの": {
+    id: "荒くれもの", name: "荒くれもの", cost: 4, type: "unit", atk: 5, hp: 3,
+    effectText: ""
+  },
+  "近衛騎士": {
+    id: "近衛騎士", name: "近衛騎士", cost: 6, type: "unit", atk: 6, hp: 6,
+    effectText: ""
+  },
+  "山賊の頭": {
+    id: "山賊の頭", name: "山賊の頭", cost: 7, type: "unit", atk: 3, hp: 6,
+    effectText: "場に出た時：相手のユニット1体に6ダメージ。荒くれものを1体場に出す。",
+    needsTarget: true,
+    onPlay: (game, owner, targetUid) => {
+      if (targetUid != null) game.damageUnit(targetUid, 6);
+      game.summonToken(owner, "荒くれもの");
     }
   }
 
@@ -583,23 +603,45 @@ const INITIAL_DECK = [
   "兵団長", "兵団長"
 ];
 
+/** 対戦相手の初期デッキ（1〜14戦のベース） */
+const ENEMY_DECK_EARLY = [
+  "召集兵", "召集兵",
+  "下級兵士", "下級兵士",
+  "尖兵", "尖兵",
+  "騎兵", "騎兵",
+  "兵士組", "兵士組",
+  "中級兵士", "中級兵士",
+  "旗手",
+  "鼓舞する士官",
+  "リクルート", "リクルート",
+  "兵隊招集", "兵隊招集",
+  "兵士投入", "兵士投入",
+  "軍団兵", "軍団兵",
+  "上級兵士", "上級兵士",
+  "投石部隊", "投石部隊",
+  "兵団長", "兵団長",
+  "処刑",
+  "猛将の護衛"
+];
+
 /** レアリティマップ */
 const RARITY_MAP = {
   "斥候": "epic", "民兵": "epic", "盾兵": "normal", "疾風騎兵": "epic",
-  "治療兵": "epic", "弓兵": "epic", "槍兵": "epic", "重装兵": "normal",
+  "治療兵": "normal", "弓兵": "epic", "槍兵": "epic", "重装兵": "normal",
   "伝令": "epic", "鼓舞する士官": "epic", "斬り込み隊": "epic",
   "鉄壁の守備兵": "normal", "突撃兵": "epic", "戦医": "epic", "破壊工作員": "ultimate",
   "精鋭槍兵": "epic", "猛将の護衛": "epic", "火炎弓兵": "ultimate",
   "大盾兵": "ultimate", "破壊の巨人兵": "ultimate",
   "応急手当": "normal", "矢の雨": "epic", "補給": "epic", "鼓舞": "epic",
-  "狙撃": "epic", "戦術指揮": "epic", "落石": "normal", "全滅の計": "epic",
+  "狙撃": "normal", "戦術指揮": "epic", "落石": "normal", "全滅の計": "epic",
   "大回復": "epic", "処刑": "epic",
   "野戦病院": "epic", "訓練所": "epic", "矢倉": "epic", "補給基地": "ultimate", "要塞砲台": "ultimate",
   "偵察兵": "epic", "旗手": "epic", "暗殺者": "ultimate", "補給兵": "epic", "連射弓兵": "epic",
-  "決死隊": "epic", "毒矢": "epic", "緊急徴兵": "epic", "監視塔": "epic", "兵舎": "epic",
+  "決死隊": "epic", "毒矢": "normal", "緊急徴兵": "epic", "監視塔": "epic", "兵舎": "epic",
   "王直属近衛": "ultimate", "黒騎兵団": "ultimate", "戦術爆撃": "ultimate",
   "再生の儀式": "ultimate", "魔法砲台": "ultimate",
     "荒くれものの頭": "epic", "銀の突撃兵": "epic", "守護兵団": "ultimate",
+  "荒くれもの": "normal", "近衛騎士": "normal", "山賊の頭": "epic",
   "英雄級指揮官": "ultimate", "伝説級騎士団長": "ultimate",
   "名の知れた傭兵": "ultimate", "不屈の護衛官": "ultimate", "無双の将校": "ultimate", "伝説的な指揮官": "epic",
   "伝説の英雄": "legend", "不滅の守護神": "legend", "終末の宣告": "legend",
@@ -769,7 +811,7 @@ function generateEnemyDeck(streak) {
   } else {
     // 1〜14戦目: 徐々に高レアに2枚ずつ交換
     if (!_enemyDeckCache || streak === 0) {
-      deck = [...INITIAL_DECK];
+      deck = [...ENEMY_DECK_EARLY];
     } else {
       deck = [..._enemyDeckCache];
     }
