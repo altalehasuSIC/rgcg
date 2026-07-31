@@ -23,6 +23,7 @@
         <button id="btn-start" class="btn primary">新しい挑戦を始める</button>
         <p class="high-score-line">ハイスコア: <strong id="high-score">0</strong>　（最高連勝: <strong id="high-streak">0</strong>）</p>
         <button id="btn-continue" class="btn hidden">挑戦を再開（連勝 <span id="continue-streak">0</span>）→ デッキ編成</button>
+        <button id="btn-free-mode" class="btn">フリー対戦</button>
       </div>
       <div class="rules-box">
         <h3>基本ルール</h3>
@@ -34,6 +35,30 @@
           <li>勝利するたび限定カードを5枚獲得（所持に追加）</li>
           <li>カードは<strong>ダブルクリック</strong>（スマホは2回タップ）でプレイ</li>
         </ul>
+      </div>
+    </div>
+
+    <!-- フリー対戦：敵選択 -->
+    <div id="free-select-screen" class="screen hidden">
+      <h2>フリー対戦</h2>
+      <p class="subtitle">対戦相手を選んでください</p>
+      <div class="free-battle-list">
+        <button type="button" class="btn free-battle-btn" data-free="A">
+          <strong>バトルA　フィールド</strong>
+          <span>砲台・兵舎・除去で場を支配するデッキ</span>
+        </button>
+        <button type="button" class="btn free-battle-btn" data-free="B">
+          <strong>バトルB　展開力</strong>
+          <span>召喚・展開で一気に数で押すデッキ</span>
+        </button>
+        <button type="button" class="btn free-battle-btn" data-free="C">
+          <strong>バトルC　スタッツ</strong>
+          <span>高ステータスとバフで正面から押し切るデッキ</span>
+        </button>
+      </div>
+      <div class="button-row">
+        <button id="btn-free-edit-deck" class="btn">デッキを編集</button>
+        <button id="btn-free-to-title" class="btn">タイトルへ</button>
       </div>
     </div>
 

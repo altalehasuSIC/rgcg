@@ -214,15 +214,39 @@ class Game {
     document.getElementById("btn-start").onclick = () => {
       if (this.bgm) this.bgm.unlock();
       this.hasActiveRun = false;
+      this.gameMode = "roguelike";
       this.openDeckBuilder("start");
     };
     document.getElementById("btn-continue").onclick = () => {
       if (this.bgm) this.bgm.unlock();
       this.continueRun();
     };
+    const freeBtn = document.getElementById("btn-free-mode");
+    if (freeBtn) freeBtn.onclick = () => {
+      if (this.bgm) this.bgm.unlock();
+      this.gameMode = "free";
+      this.freeBattleId = null;
+      this.openDeckBuilder("free");
+    };
+    document.querySelectorAll(".free-battle-btn").forEach(btn => {
+      btn.onclick = () => {
+        this.freeBattleId = btn.dataset.free;
+        this.startFreeBattle(this.freeBattleId);
+      };
+    });
+    const freeEdit = document.getElementById("btn-free-edit-deck");
+    if (freeEdit) freeEdit.onclick = () => this.openDeckBuilder("free");
+    const freeTitle = document.getElementById("btn-free-to-title");
+    if (freeTitle) freeTitle.onclick = () => {
+      this.gameMode = null;
+      this.showScreen("title-screen");
+    };
     document.getElementById("btn-reset-deck").onclick = () => this.resetBuilderDeck();
     document.getElementById("btn-confirm-deck").onclick = () => this.confirmDeck();
-    document.getElementById("btn-deck-to-title").onclick = () => this.goTitleKeepProgress();
+    document.getElementById("btn-deck-to-title").onclick = () => {
+      if (this.deckEditMode === "free") this.showScreen("title-screen");
+      else this.goTitleKeepProgress();
+    };
     document.getElementById("btn-keep-hand").onclick = () => this.startBattleAfterMulligan(false);
     document.getElementById("btn-mulligan").onclick = () => this.startBattleAfterMulligan(true);
     document.getElementById("btn-mulligan-to-title").onclick = () => this.goTitleKeepProgress();
@@ -427,12 +451,46 @@ class Game {
       if (total >= 30) return;
       if (this.deckEditMode === "start") {
         if (next > 2) return;
+      } else if (this.deckEditMode === "free") {
+        const r = getRarity(cardId);
+        // レジェンド: 同名1枚まで、種類は2まで
+        if (r === "legend") {
+          if (next > 1) {
+            this._deckWarn = "レジェンドの同名カードは1枚までです";
+            this.renderDeckBuilder();
+            return;
+          }
+          const legendTypes = new Set();
+          Object.entries(this.builderDeck).forEach(([id, cnt]) => {
+            if (cnt > 0 && getRarity(id) === "legend") legendTypes.add(id);
+          });
+          if (!legendTypes.has(cardId) && legendTypes.size >= 2) {
+            this._deckWarn = "レジェンドは2種類までです";
+            this.renderDeckBuilder();
+            return;
+          }
+        } else {
+          if (next > 2) return;
+        }
+        // アルティメット: 5種類まで
+        if (r === "ultimate") {
+          const types = new Set();
+          Object.entries(this.builderDeck).forEach(([id, cnt]) => {
+            if (cnt > 0 && getRarity(id) === "ultimate") types.add(id);
+          });
+          if (!types.has(cardId) && types.size >= 5) {
+            this._deckWarn = "アルティメットは5種類までです";
+            this.renderDeckBuilder();
+            return;
+          }
+        }
       } else {
         const owned = this.ownedCards[cardId] || 0;
         if (next > owned) return;
       }
     }
 
+    this._deckWarn = null;
     if (next <= 0) {
       delete this.builderDeck[cardId];
     } else {
@@ -461,10 +519,38 @@ class Game {
 
     // プールに表示するID
     let poolIds;
-    if (this.deckEditMode === "start") {
+    if (this.deckEditMode === "start" || this.deckEditMode === "free") {
       poolIds = Object.keys(CARD_POOL);
     } else {
       poolIds = Object.keys(this.ownedCards);
+    }
+
+    // フリー制限の表示
+    let limitEl = document.getElementById("deck-limit-info");
+    if (!limitEl) {
+      limitEl = document.createElement("p");
+      limitEl.id = "deck-limit-info";
+      limitEl.className = "deck-limit-info";
+      const status = document.getElementById("deck-status-text");
+      if (status && status.parentNode) status.parentNode.insertBefore(limitEl, status.nextSibling);
+    }
+    if (this.deckEditMode === "free") {
+      const legendTypes = new Set();
+      let legendCopies = 0;
+      const ultTypes = new Set();
+      Object.entries(this.builderDeck).forEach(([id, cnt]) => {
+        const r = getRarity(id);
+        if (r === "legend" && cnt > 0) { legendTypes.add(id); legendCopies += cnt; }
+        if (r === "ultimate" && cnt > 0) ultTypes.add(id);
+      });
+      const warn = this._deckWarn;
+      limitEl.style.display = "";
+      limitEl.className = "deck-limit-info" + (warn ? " warn" : "");
+      limitEl.textContent = warn
+        ? warn
+        : `レジェンド種類 ${legendTypes.size}/2（各1枚）　アルティメット種類 ${ultTypes.size}/5`;
+    } else if (limitEl) {
+      limitEl.style.display = "none";
     }
     poolIds.sort((a, b) => {
       const ca = CARD_POOL[a].cost - CARD_POOL[b].cost;
@@ -562,27 +648,81 @@ class Game {
 
   confirmDeck() {
     if (this.getBuilderCount() !== 30) return;
+    if (this.deckEditMode === "free") {
+      const legendTypes = new Set();
+      let legendOk = true;
+      const ultTypes = new Set();
+      Object.entries(this.builderDeck).forEach(([id, cnt]) => {
+        const r = getRarity(id);
+        if (r === "legend" && cnt > 0) {
+          legendTypes.add(id);
+          if (cnt > 1) legendOk = false;
+        }
+        if (r === "ultimate" && cnt > 0) ultTypes.add(id);
+      });
+      if (!legendOk) {
+        this._deckWarn = "レジェンドの同名カードは1枚までです";
+        this.renderDeckBuilder();
+        return;
+      }
+      if (legendTypes.size > 2) {
+        this._deckWarn = "レジェンドは2種類までです";
+        this.renderDeckBuilder();
+        return;
+      }
+      if (ultTypes.size > 5) {
+        this._deckWarn = "アルティメットは5種類までです";
+        this.renderDeckBuilder();
+        return;
+      }
+    }
     this.runDeck = [];
     Object.entries(this.builderDeck).forEach(([id, cnt]) => {
       for (let i = 0; i < cnt; i++) this.runDeck.push(id);
     });
     if (this.deckEditMode === "start") {
+      this.gameMode = "roguelike";
       this.collection = [...this.runDeck];
       this.winStreak = 0;
       this.runScore = 0;
       this.hasActiveRun = true;
       if (typeof resetEnemyDeckCache === "function") resetEnemyDeckCache();
+      this.startNextBattle();
+    } else if (this.deckEditMode === "free") {
+      this.gameMode = "free";
+      this.freeDeck = [...this.runDeck];
+      this.showScreen("free-select-screen");
+    } else {
+      this.startNextBattle();
     }
-    this.startNextBattle();
   }
 
   retire() {
+    if (this.gameMode === "free") {
+      this.showScreen("free-select-screen");
+      return;
+    }
     if (!confirm("リタイアして敗北になります。よろしいですか？")) return;
     this.hasActiveRun = false;
     this.loseBattle();
   }
 
   // ========== ラン／戦闘開始 ==========
+  startFreeBattle(id) {
+    this.gameMode = "free";
+    this.freeBattleId = id;
+    this.winStreak = 0;
+    this.hasActiveRun = false;
+    if (this.freeDeck && this.freeDeck.length === 30) {
+      this.runDeck = [...this.freeDeck];
+    } else if (this.runDeck.length !== 30) {
+      // デッキ未確定なら構築へ
+      this.openDeckBuilder("free");
+      return;
+    }
+    this.startNextBattle();
+  }
+
   startNextBattle() {
     this.enemyName = this.getEnemyName(this.winStreak);
     this.player = this.createPlayerState("player");
@@ -1338,6 +1478,7 @@ class Game {
   // ========== 敵AI ==========
 
   triggerEnemySpecials() {
+    if (this.gameMode === "free") return;
     const battleNum = (this.winStreak || 0) + 1;
     const turn = this.battleTurn || 1;
     if (!this.enemySpecialDone) this.enemySpecialDone = {};
